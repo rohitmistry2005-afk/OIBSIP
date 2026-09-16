@@ -57,3 +57,64 @@ export async function requestPasswordReset(email: string): Promise<ResetPassword
     return { success: false, error: message };
   }
 }
+
+/**
+ * Updates the authenticated user's password using the active recovery session.
+ * Does not fake success if unconfigured or if Supabase returns an error.
+ */
+export async function updateUserPassword(newPassword: string): Promise<ResetPasswordResult> {
+  if (!newPassword || newPassword.length < 8) {
+    return { success: false, error: 'Password must be at least 8 characters long.' };
+  }
+
+  if (!supabase) {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    return {
+      success: false,
+      error: 'Authentication service is not configured. Please configure the required environment variables before resetting your password.',
+    };
+  }
+
+  try {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'An unexpected error occurred while updating your password.';
+    return { success: false, error: message };
+  }
+}
+
+/**
+ * Checks whether an active Supabase session or recovery context is present.
+ */
+export async function checkRecoverySession(): Promise<boolean> {
+  if (!supabase) return false;
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) return true;
+
+    // Check if recovery tokens are present in window.location (hash or search)
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      const search = window.location.search;
+      if (
+        hash.includes('type=recovery') ||
+        hash.includes('access_token=') ||
+        search.includes('code=')
+      ) {
+        return true;
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
