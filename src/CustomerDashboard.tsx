@@ -433,7 +433,7 @@ export function CustomerDashboard({
                 <button
                   type="button"
                   className="card-text-link"
-                  onClick={() => onNavigate('/orders')}
+                  onClick={() => onNavigate('/orders/PD-2048')}
                 >
                   <span>View Details</span>
                   <ArrowRight size={14} aria-hidden="true" />
@@ -774,7 +774,7 @@ export function CustomerDashboard({
                   </thead>
                   <tbody>
                     {/* Row 1 */}
-                    <tr onClick={() => onNavigate('/orders')}>
+                    <tr onClick={() => onNavigate('/orders/PD-2048')}>
                       <td>
                         <strong>#PD-2048</strong>
                       </td>
@@ -792,7 +792,7 @@ export function CustomerDashboard({
                     </tr>
 
                     {/* Row 2 */}
-                    <tr onClick={() => onNavigate('/orders')}>
+                    <tr onClick={() => onNavigate('/orders/PD-2017')}>
                       <td>
                         <strong>#PD-2017</strong>
                       </td>
@@ -810,7 +810,7 @@ export function CustomerDashboard({
                     </tr>
 
                     {/* Row 3 */}
-                    <tr onClick={() => onNavigate('/orders')}>
+                    <tr onClick={() => onNavigate('/orders/PD-1983')}>
                       <td>
                         <strong>#PD-1983</strong>
                       </td>
