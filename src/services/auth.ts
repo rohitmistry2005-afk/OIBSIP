@@ -162,3 +162,32 @@ export async function resendVerificationEmail(email: string): Promise<ResetPassw
     return { success: false, error: message };
   }
 }
+
+/**
+ * Updates user profile metadata through the existing Supabase auth client if configured.
+ * If Supabase is not configured or user is not logged in, returns a note without faking server persistence.
+ */
+export async function updateUserProfile(fullName: string): Promise<ResetPasswordResult> {
+  if (!supabase) {
+    return {
+      success: false,
+      error: 'Authentication service is not configured. Changes will apply to this local session only.',
+    };
+  }
+
+  try {
+    const { error } = await supabase.auth.updateUser({
+      data: { full_name: fullName.trim() },
+    });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'An error occurred while updating your profile.';
+    return { success: false, error: message };
+  }
+}
+

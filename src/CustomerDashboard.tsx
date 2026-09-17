@@ -212,7 +212,7 @@ export function CustomerDashboard({
             className="dashboard-sidebar-item"
             onClick={() => {
               setMobileNavOpen(false);
-              triggerNotice('Account profile management coming soon!');
+              onNavigate('/profile');
             }}
           >
             <User size={18} aria-hidden="true" />
@@ -338,7 +338,13 @@ export function CustomerDashboard({
             </button>
 
             {/* User Profile Area */}
-            <div className="dashboard-user-area" role="group" aria-label="Customer profile">
+            <div
+              className="dashboard-user-area"
+              onClick={() => onNavigate('/profile')}
+              role="button"
+              tabIndex={0}
+              aria-label="View Customer profile"
+            >
               <img
                 src="https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&h=100&w=100"
                 alt=""
