@@ -9,26 +9,37 @@ import { Payment } from './Payment';
 import { OrderDetails } from './OrderDetails';
 import { AdminLogin } from './AdminLogin';
 import { AdminOrderDetails } from './AdminOrderDetails';
+import { AdminInventory } from './AdminInventory';
 import {
   ArrowRight,
+  BarChart3,
+  Bell,
+  Boxes,
   Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clock3,
+  FileText,
   Heart,
+  Home as HomeIcon,
   Leaf,
+  LogOut,
   Menu as MenuIcon,
   Minus,
   PackageCheck,
   Palette,
+  Percent,
   Plus,
   Search,
+  Settings,
   ShieldCheck,
   ShoppingBag,
   Sparkles,
   Truck,
   UserRound,
+  Users,
+  Utensils,
   X,
 } from 'lucide-react';
 
@@ -87,7 +98,209 @@ function AuthPage({ register = false }: { register?: boolean }) { return <main c
 
 function Orders() { return <main className="page-shell orders-page"><div className="page-intro compact"><p className="eyebrow">Your journey</p><h1>Track your <em>orders.</em></h1><p>Every step from our kitchen to your door.</p></div><div className="order-active"><div><span className="status-pill"><span /> In Kitchen</span><h2 onClick={() => go('/orders/PD-2048')} style={{ cursor: 'pointer' }}>Order #PD-2048</h2><p>Your pizza is being made fresh by our kitchen team.</p></div><div className="order-time"><Clock3 size={19} /><strong>Arriving in 18–24 min</strong></div><div className="status-track"><div className="status-step done"><span><Check size={15} /></span><strong>Order Received</strong><small>12:42 PM</small></div><div className="track-line active" /><div className="status-step current"><span><PackageCheck size={16} /></span><strong>In Kitchen</strong><small>Happening now</small></div><div className="track-line" /><div className="status-step"><span>3</span><strong>Sent to Delivery</strong><small>Up next</small></div></div></div><div className="past-orders"><div className="section-heading"><h2>Past orders</h2><button className="text-link" onClick={() => go('/orders/PD-2048')}>View all <ArrowRight size={15} /></button></div>{['#PD-1932 · Farmhouse', '#PD-1877 · Margherita'].map((item, i) => <div className="past-order" key={item} onClick={() => go(i ? '/orders/PD-1877' : '/orders/PD-1932')} style={{ cursor: 'pointer' }}><div><strong>{item}</strong><span>{i ? '18 Aug 2026' : '02 Sep 2026'} · ₹{i ? 299 : 698}</span></div><span className="delivered"><Check size={14} /> Delivered</span><button className="reorder" onClick={(e) => { e.stopPropagation(); go('/menu'); }}>Reorder</button></div>)}</div></main>; }
 
-function Admin() { const [tab, setTab] = useState('Dashboard'); return <main className="admin-layout"><aside className="admin-sidebar"><Logo /><p className="admin-label">Workspace</p>{['Dashboard', 'Orders', 'Inventory'].map(item => <button className={tab === item ? 'admin-nav active' : 'admin-nav'} onClick={() => setTab(item)} key={item}><PackageCheck size={17} />{item}</button>)}<div className="admin-spacer" /><button className="admin-nav"><UserRound size={17} />Profile</button><button className="admin-nav" onClick={() => go('/')}><X size={17} />Log out</button></aside><section className="admin-content"><div className="admin-top"><div><p className="eyebrow">Wednesday, 16 September 2026</p><h1>{tab}</h1></div><div className="admin-user"><span className="admin-avatar">AD</span><span><strong>Admin</strong><small>Operations</small></span><ChevronDown size={16} /></div></div>{tab === 'Dashboard' ? <><div className="stats-grid">{[['Today’s Orders', '128', '+12.5%', ShoppingBag], ['Active Orders', '36', '+8.2%', Truck], ['Low Stock Items', '07', 'Needs attention', Leaf], ['Revenue Today', '₹48,690', '+18.4%', Sparkles]].map(([label, value, change, Icon]) => <div className="stat-card" key={label as string}><div className="stat-icon"><Icon size={19} /></div><span>{label as string}</span><strong>{value as string}</strong><small className="positive">{change as string}</small></div>)}</div><div className="admin-panels"><div className="admin-panel"><div className="panel-head"><div><p className="eyebrow">Live operations</p><h2>Recent orders</h2></div><button className="text-link" onClick={() => setTab('Orders')}>View all <ArrowRight size={15} /></button></div><table><thead><tr><th>Order</th><th>Customer</th><th>Amount</th><th>Status</th></tr></thead><tbody>{[['#PD-2048', 'Riya Sharma', '₹698', 'In Kitchen'], ['#PD-2047', 'Arjun Mehta', '₹449', 'Received'], ['#PD-2046', 'Neha Kapoor', '₹1,048', 'Delivery']].map(row => <tr key={row[0]} onClick={() => go(`/admin/orders/${row[0].replace('#', '')}`)} style={{ cursor: 'pointer' }}><td><strong>{row[0]}</strong></td><td>{row[1]}</td><td>{row[2]}</td><td><span className="table-status">{row[3]}</span></td></tr>)}</tbody></table></div><div className="admin-panel prep-panel"><p className="eyebrow">Kitchen pulse</p><h2>Orders are moving smoothly.</h2><div className="pulse-chart"><span style={{ height: '38%' }} /><span style={{ height: '60%' }} /><span style={{ height: '45%' }} /><span style={{ height: '80%' }} /><span style={{ height: '68%' }} /><span style={{ height: '92%' }} /><span style={{ height: '72%' }} /></div><small>Average prep time <strong>14 mins</strong></small></div></div></> : <div className="admin-panel full-panel"><div className="panel-head"><div><p className="eyebrow">Operations</p><h2>{tab} overview</h2></div><Button><Plus size={16} /> Add new</Button></div><div style={{ margin: '16px 0', overflowX: 'auto' }}><table><thead><tr><th>Order</th><th>Customer</th><th>Amount</th><th>Status</th></tr></thead><tbody>{[['#PD-2048', 'Riya Sharma', '₹698', 'In Kitchen'], ['#PD-2047', 'Arjun Mehta', '₹449', 'Received'], ['#PD-2046', 'Neha Kapoor', '₹1,048', 'Delivery']].map(row => <tr key={row[0]} onClick={() => go(`/admin/orders/${row[0].replace('#', '')}`)} style={{ cursor: 'pointer' }}><td><strong>{row[0]}</strong></td><td>{row[1]}</td><td>{row[2]}</td><td><span className="table-status">{row[3]}</span></td></tr>)}</tbody></table></div><div className="admin-empty"><Sparkles size={30} /><h3>{tab} is ready to connect</h3><p>Mock records are available here while your backend is being connected.</p></div></div>}</section></main>; }
+const adminNavItems = [
+  { id: 'Dashboard', label: 'Dashboard', icon: HomeIcon },
+  { id: 'Orders', label: 'Orders', icon: FileText, badge: 12 },
+  { id: 'Menu Management', label: 'Menu Management', icon: Utensils },
+  { id: 'Inventory', label: 'Inventory', icon: Boxes },
+  { id: 'Customers', label: 'Customers', icon: Users },
+  { id: 'Offers & Coupons', label: 'Offers & Coupons', icon: Percent },
+  { id: 'Reports', label: 'Reports', icon: BarChart3 },
+  { id: 'Notifications', label: 'Notifications', icon: Bell, badge: 3 },
+  { id: 'Settings', label: 'Settings', icon: Settings },
+];
+
+function Admin() {
+  const [tab, setTab] = useState('Dashboard');
+  return (
+    <main className="admin-layout">
+      <aside className="admin-sidebar">
+        <Logo />
+        <p className="admin-label">ADMIN PANEL</p>
+        <div className="admin-nav-list">
+          {adminNavItems.map(({ id, label, icon: Icon, badge }) => (
+            <button
+              type="button"
+              className={tab === id ? 'admin-nav active' : 'admin-nav'}
+              onClick={() => setTab(id)}
+              key={id}
+            >
+              <Icon size={17} />
+              <span className="admin-nav-label">{label}</span>
+              {badge !== undefined && <span className="admin-nav-badge">{badge}</span>}
+            </button>
+          ))}
+        </div>
+        <div className="admin-sidebar-promo-card">
+          <div className="promo-card-copy">
+            <p className="promo-headline">
+              Fresh Ingredients<br />
+              Great Pizzas<br />
+              Happier People <span className="promo-heart">♥</span>
+            </p>
+          </div>
+          <div className="promo-card-img-wrap">
+            <img
+              src="https://images.pexels.com/photos/35759993/pexels-photo-35759993.jpeg?auto=compress&cs=tinysrgb&h=200&w=200"
+              alt="Fresh artisanal pizza"
+              loading="lazy"
+            />
+          </div>
+          <p className="promo-subnote">Stock smart.<br />Serve better.</p>
+        </div>
+        <button
+          type="button"
+          className="admin-nav admin-logout-btn"
+          onClick={() => go('/')}
+        >
+          <LogOut size={17} />
+          <span>Logout</span>
+        </button>
+      </aside>
+      <section className={`admin-content ${tab === 'Inventory' ? 'inventory-content' : ''}`}>
+        {tab === 'Inventory' ? (
+          <AdminInventory onNavigate={go} />
+        ) : (
+          <>
+            <div className="admin-top">
+              <div>
+                <p className="eyebrow">Wednesday, 16 September 2026</p>
+                <h1>{tab}</h1>
+              </div>
+              <div className="admin-user">
+                <span className="admin-avatar">AD</span>
+                <span>
+                  <strong>Admin</strong>
+                  <small>Operations</small>
+                </span>
+                <ChevronDown size={16} />
+              </div>
+            </div>
+            {tab === 'Dashboard' ? (
+              <>
+                <div className="stats-grid">
+                  {[
+                    ['Today’s Orders', '128', '+12.5%', ShoppingBag],
+                    ['Active Orders', '36', '+8.2%', Truck],
+                    ['Low Stock Items', '07', 'Needs attention', Leaf],
+                    ['Revenue Today', '₹48,690', '+18.4%', Sparkles],
+                  ].map(([label, value, change, Icon]) => (
+                    <div className="stat-card" key={label as string}>
+                      <div className="stat-icon"><Icon size={19} /></div>
+                      <span>{label as string}</span>
+                      <strong>{value as string}</strong>
+                      <small className="positive">{change as string}</small>
+                    </div>
+                  ))}
+                </div>
+                <div className="admin-panels">
+                  <div className="admin-panel">
+                    <div className="panel-head">
+                      <div>
+                        <p className="eyebrow">Live operations</p>
+                        <h2>Recent orders</h2>
+                      </div>
+                      <button className="text-link" onClick={() => setTab('Orders')}>
+                        View all <ArrowRight size={15} />
+                      </button>
+                    </div>
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Order</th>
+                          <th>Customer</th>
+                          <th>Amount</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          ['#PD-2048', 'Riya Sharma', '₹698', 'In Kitchen'],
+                          ['#PD-2047', 'Arjun Mehta', '₹449', 'Received'],
+                          ['#PD-2046', 'Neha Kapoor', '₹1,048', 'Delivery'],
+                        ].map(row => (
+                          <tr
+                            key={row[0]}
+                            onClick={() => go(`/admin/orders/${row[0].replace('#', '')}`)}
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <td><strong>{row[0]}</strong></td>
+                            <td>{row[1]}</td>
+                            <td>{row[2]}</td>
+                            <td><span className="table-status">{row[3]}</span></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="admin-panel prep-panel">
+                    <p className="eyebrow">Kitchen pulse</p>
+                    <h2>Orders are moving smoothly.</h2>
+                    <div className="pulse-chart">
+                      <span style={{ height: '38%' }} />
+                      <span style={{ height: '60%' }} />
+                      <span style={{ height: '45%' }} />
+                      <span style={{ height: '80%' }} />
+                      <span style={{ height: '68%' }} />
+                      <span style={{ height: '92%' }} />
+                      <span style={{ height: '72%' }} />
+                    </div>
+                    <small>Average prep time <strong>14 mins</strong></small>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="admin-panel full-panel">
+                <div className="panel-head">
+                  <div>
+                    <p className="eyebrow">Operations</p>
+                    <h2>{tab} overview</h2>
+                  </div>
+                  <Button><Plus size={16} /> Add new</Button>
+                </div>
+                <div style={{ margin: '16px 0', overflowX: 'auto' }}>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Order</th>
+                        <th>Customer</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        ['#PD-2048', 'Riya Sharma', '₹698', 'In Kitchen'],
+                        ['#PD-2047', 'Arjun Mehta', '₹449', 'Received'],
+                        ['#PD-2046', 'Neha Kapoor', '₹1,048', 'Delivery'],
+                      ].map(row => (
+                        <tr
+                          key={row[0]}
+                          onClick={() => go(`/admin/orders/${row[0].replace('#', '')}`)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <td><strong>{row[0]}</strong></td>
+                          <td>{row[1]}</td>
+                          <td>{row[2]}</td>
+                          <td><span className="table-status">{row[3]}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="admin-empty">
+                  <Sparkles size={30} />
+                  <h3>{tab} is ready to connect</h3>
+                  <p>Mock records are available here while your backend is being connected.</p>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </section>
+    </main>
+  );
+}
 
 function OrderSummary({ items }: { items: Product[] }) { const total = items.reduce((sum, item) => sum + item.price, 0) || 698; return <main className="page-shell checkout-page"><div className="checkout-steps"><span className="active">01 Basket</span><span>02 Payment</span><span>03 Confirmation</span></div><div className="checkout-layout"><div><p className="eyebrow">Almost there</p><h1>Review your <em>order.</em></h1><div className="checkout-card"><h2>Your pizzas</h2>{(items.length ? items : [products[0], products[1]]).map((item, i) => <div className="checkout-item" key={`${item.id}-${i}`}><img src={item.image} alt="" /><div><strong>{item.name}</strong><small>Classic crust · Fresh mozzarella</small><span className="quantity"><button><Minus size={13} /></button> 1 <button><Plus size={13} /></button></span></div><b>₹{item.price}</b></div>)}</div></div><aside className="checkout-summary"><p className="eyebrow">Order total</p><h2>Summary</h2><div><span>Subtotal</span><b>₹{total}</b></div><div><span>Delivery</span><b className="success-text">FREE</b></div><div><span>Taxes</span><b>₹{Math.round(total * .05)}</b></div><hr /><div className="grand-total"><span>Total</span><strong>₹{total + Math.round(total * .05)}</strong></div><Button className="full-button" onClick={() => go('/payment')}>Continue to payment <ArrowRight size={16} /></Button><small className="secure-note"><ShieldCheck size={15} /> Secure checkout powered by Razorpay</small></aside></div></main>; }
 
