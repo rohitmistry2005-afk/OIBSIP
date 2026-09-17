@@ -118,3 +118,47 @@ export async function checkRecoverySession(): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Resends an email verification link using Supabase auth.
+ * Returns an error if unconfigured or if the request fails without faking success.
+ */
+export async function resendVerificationEmail(email: string): Promise<ResetPasswordResult> {
+  const cleanEmail = email.trim();
+
+  if (!cleanEmail) {
+    return { success: false, error: 'Please provide a valid email address to resend the verification link.' };
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(cleanEmail)) {
+    return { success: false, error: 'Please enter a valid email address (e.g. you@example.com).' };
+  }
+
+  if (!supabase) {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    return {
+      success: false,
+      error: 'Email verification service is not configured. Please configure the required authentication environment variables before sending verification emails.',
+    };
+  }
+
+  try {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: cleanEmail,
+      options: {
+        emailRedirectTo: `${window.location.origin}/verify-email`,
+      },
+    });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'An unexpected error occurred while resending the verification email.';
+    return { success: false, error: message };
+  }
+}
