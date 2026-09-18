@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ForgotPassword } from './ForgotPassword';
 import { ResetPassword } from './ResetPassword';
 import { EmailVerification } from './EmailVerification';
@@ -67,12 +67,243 @@ const benefits = [
   [Leaf, 'Fresh Ingredients'], [Truck, 'Fast Delivery'], [ShieldCheck, 'Secure Payments'], [Heart, 'Loved by Thousands'],
 ];
 
+const CART_STORAGE_KEY = 'pizzadelight_cart';
+
+const defaultCustomPizza: Product = {
+  id: 'custom',
+  name: 'Your Custom Pizza',
+  description: 'Classic Crust · Signature Tomato · Fresh Mozzarella · Mushrooms, Olives',
+  price: 499,
+  image: photos.hero,
+  available: true,
+};
+
+function loadInitialCart(): Product[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(CART_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    const restored: Product[] = [];
+    for (const item of parsed) {
+      const id = typeof item === 'string' ? item : (item && typeof item === 'object' && typeof (item as { id?: unknown }).id === 'string' ? (item as { id: string }).id : null);
+      if (id) {
+        const found = id === 'custom' ? defaultCustomPizza : products.find(p => p.id === id);
+        if (found) {
+          restored.push(found);
+        }
+      }
+    }
+    return restored;
+  } catch {
+    return [];
+  }
+}
+
 function go(path: string) { window.history.pushState({}, '', path); window.dispatchEvent(new PopStateEvent('popstate')); window.scrollTo(0, 0); }
 function Logo() { return <button className="logo" onClick={() => go('/')} aria-label="PizzaDelight home"><span className="logo-mark">◒</span><span><strong>PizzaDelight</strong><small>GOOD PIZZA. HAPPIER PEOPLE.</small></span></button>; }
 
 function Header({ cartCount, onCart }: { cartCount: number; onCart: () => void }) {
   const [open, setOpen] = useState(false);
-  return <header className="site-header"><div className="header-inner"><Logo /><nav className={open ? 'nav open' : 'nav'}><button onClick={() => go('/')}>Menu</button><button onClick={() => go('/builder')}>Build Your Own</button><button onClick={() => go('/about')}>About</button><button onClick={() => go('/orders')}>Track Order</button></nav><div className="header-actions"><button className="icon-button search-only" aria-label="Search"><Search size={19} /></button><button className="cart-button" onClick={onCart} aria-label="Open cart"><ShoppingBag size={20} /><span>{cartCount}</span></button><button className="login-link" onClick={() => go('/login')}>Login</button><button className="button button-small" onClick={() => go('/register')}>Sign Up</button></div><button className="mobile-menu" onClick={() => setOpen(!open)} aria-label="Toggle menu">{open ? <X size={24} /> : <MenuIcon size={24} />}</button></div></header>;
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Close search on Escape key
+  useEffect(() => {
+    if (!searchOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSearchOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [searchOpen]);
+
+  // Close search on click outside
+  useEffect(() => {
+    if (!searchOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setSearchOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [searchOpen]);
+
+  // Focus input when opened
+  useEffect(() => {
+    if (searchOpen) {
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [searchOpen]);
+
+  const filteredProducts = query.trim()
+    ? products.filter((p) => {
+        const q = query.toLowerCase().trim();
+        return (
+          p.name.toLowerCase().includes(q) ||
+          p.description.toLowerCase().includes(q) ||
+          (p.badge && p.badge.toLowerCase().includes(q))
+        );
+      })
+    : [];
+
+  const handleSelectProduct = (productId: string) => {
+    go(`/pizza/${productId}`);
+    setSearchOpen(false);
+    setQuery('');
+  };
+
+  const handleToggleSearch = () => {
+    setSearchOpen((prev) => {
+      if (!prev) setOpen(false);
+      return !prev;
+    });
+  };
+
+  return (
+    <header className="site-header">
+      <div className="header-inner">
+        <Logo />
+        <nav className={open ? 'nav open' : 'nav'}>
+          <button onClick={() => go('/')}>Menu</button>
+          <button onClick={() => go('/builder')}>Build Your Own</button>
+          <button onClick={() => go('/about')}>About</button>
+          <button onClick={() => go('/orders')}>Track Order</button>
+        </nav>
+        <div className="header-actions">
+          <div className="header-search-wrap" ref={searchContainerRef}>
+            <button
+              className={`icon-button search-only ${searchOpen ? 'active' : ''}`}
+              aria-label="Search"
+              onClick={handleToggleSearch}
+              type="button"
+            >
+              <Search size={19} />
+            </button>
+            {searchOpen && (
+              <div className="search-popover" role="dialog" aria-label="Search pizzas">
+                <div className="search-input-row">
+                  <Search size={16} className="search-icon-inside" />
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    className="search-input-field"
+                    placeholder="Search pizzas (e.g. Margherita, Farmhouse)..."
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    aria-label="Search pizza query"
+                  />
+                  {query && (
+                    <button
+                      type="button"
+                      className="search-action-icon"
+                      onClick={() => setQuery('')}
+                      aria-label="Clear search text"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="search-action-icon close-search-btn"
+                    onClick={() => setSearchOpen(false)}
+                    aria-label="Close search"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <div className="search-dropdown-content">
+                  {query.trim().length === 0 ? (
+                    <div className="search-empty-hint">
+                      <p>Type to search our handcrafted pizzas</p>
+                      <div className="search-hint-tags">
+                        {products.map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            className="search-hint-tag"
+                            onClick={() => setQuery(p.name)}
+                          >
+                            {p.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : filteredProducts.length === 0 ? (
+                    <div className="search-no-matches">
+                      <p>No pizzas found for <strong>"{query}"</strong></p>
+                      <small>Try checking the spelling or browse our full menu</small>
+                    </div>
+                  ) : (
+                    <div className="search-results-list">
+                      {filteredProducts.map((product) => (
+                        <div
+                          key={product.id}
+                          className="search-result-row"
+                          onClick={() => handleSelectProduct(product.id)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              handleSelectProduct(product.id);
+                            }
+                          }}
+                        >
+                          <img
+                            src={product.image}
+                            alt={product.name}
+                            className="search-result-thumb"
+                            loading="lazy"
+                          />
+                          <div className="search-result-details">
+                            <div className="search-result-name-line">
+                              <span className="search-result-name">{product.name}</span>
+                              {product.badge && (
+                                <span className="search-result-badge-pill">{product.badge}</span>
+                              )}
+                            </div>
+                            <p className="search-result-desc-line">{product.description}</p>
+                            <span className="search-result-price-tag">₹{product.price}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <button className="cart-button" onClick={onCart} aria-label="Open cart">
+            <ShoppingBag size={20} />
+            <span>{cartCount}</span>
+          </button>
+          <button className="login-link" onClick={() => go('/login')}>
+            Login
+          </button>
+          <button className="button button-small" onClick={() => go('/register')}>
+            Sign Up
+          </button>
+        </div>
+        <button
+          className="mobile-menu"
+          onClick={() => {
+            setSearchOpen(false);
+            setOpen(!open);
+          }}
+          aria-label="Toggle menu"
+        >
+          {open ? <X size={24} /> : <MenuIcon size={24} />}
+        </button>
+      </div>
+    </header>
+  );
 }
 function Button({ children, onClick, variant = 'primary', className = '' }: { children: React.ReactNode; onClick?: () => void; variant?: 'primary' | 'outline' | 'light'; className?: string }) { return <button onClick={onClick} className={`button button-${variant} ${className}`}>{children}</button>; }
 function ProductCard({ product, onAdd }: { product: Product; onAdd: (product: Product) => void }) { return <article className="product-card"><div className="product-image" onClick={() => go(`/pizza/${product.id}`)} role="button" tabIndex={0} aria-label={`View ${product.name} details`} style={{ cursor: 'pointer' }}><img src={product.image} alt={product.name} loading="lazy" />{product.badge && <span className="product-badge">{product.badge}</span>}</div><div className="product-info"><h3 onClick={() => go(`/pizza/${product.id}`)} role="button" tabIndex={0} style={{ cursor: 'pointer' }}>{product.name}</h3><p>{product.description}</p><div className="product-footer"><strong>₹{product.price}</strong>{product.available ? <button className="add-button" onClick={() => onAdd(product)} aria-label={`Add ${product.name}`}><Plus size={20} /></button> : <span className="sold-out">Unavailable</span>}</div></div></article>; }
@@ -304,6 +535,43 @@ function Admin() {
 
 function OrderSummary({ items }: { items: Product[] }) { const total = items.reduce((sum, item) => sum + item.price, 0) || 698; return <main className="page-shell checkout-page"><div className="checkout-steps"><span className="active">01 Basket</span><span>02 Payment</span><span>03 Confirmation</span></div><div className="checkout-layout"><div><p className="eyebrow">Almost there</p><h1>Review your <em>order.</em></h1><div className="checkout-card"><h2>Your pizzas</h2>{(items.length ? items : [products[0], products[1]]).map((item, i) => <div className="checkout-item" key={`${item.id}-${i}`}><img src={item.image} alt="" /><div><strong>{item.name}</strong><small>Classic crust · Fresh mozzarella</small><span className="quantity"><button><Minus size={13} /></button> 1 <button><Plus size={13} /></button></span></div><b>₹{item.price}</b></div>)}</div></div><aside className="checkout-summary"><p className="eyebrow">Order total</p><h2>Summary</h2><div><span>Subtotal</span><b>₹{total}</b></div><div><span>Delivery</span><b className="success-text">FREE</b></div><div><span>Taxes</span><b>₹{Math.round(total * .05)}</b></div><hr /><div className="grand-total"><span>Total</span><strong>₹{total + Math.round(total * .05)}</strong></div><Button className="full-button" onClick={() => go('/payment')}>Continue to payment <ArrowRight size={16} /></Button><small className="secure-note"><ShieldCheck size={15} /> Secure checkout powered by Razorpay</small></aside></div></main>; }
 
-function App() { const [path, setPath] = useState(window.location.pathname); const [cart, setCart] = useState<Product[]>([]); const [cartOpen, setCartOpen] = useState(false); useEffect(() => { const listener = () => setPath(window.location.pathname); window.addEventListener('popstate', listener); return () => window.removeEventListener('popstate', listener); }, []); const add = (product: Product) => setCart(items => [...items, product]); const remove = (id: string) => setCart(items => { const index = items.findIndex(item => item.id === id); return index === -1 ? items : [...items.slice(0, index), ...items.slice(index + 1)]; }); const isAdminOrderDetails = path.startsWith('/admin/orders/') && path.replace('/admin/orders/', '').trim().length > 0; const currentAdminOrderId = isAdminOrderDetails ? path.replace('/admin/orders/', '').split('/')[0] : undefined; if (path === '/admin/login') return <AdminLogin onNavigate={go} />; if (isAdminOrderDetails && currentAdminOrderId) return <AdminOrderDetails orderId={currentAdminOrderId} onNavigate={go} />; if (path.startsWith('/admin')) return <Admin />; if (path === '/dashboard') return <div className="dashboard-shell-container"><CustomerDashboard cartCount={cart.length} cartTotal={cart.reduce((sum, item) => sum + item.price, 0)} onCart={() => setCartOpen(true)} onNavigate={go} onAdd={add} products={products} />{cartOpen && <CartDrawer items={cart} onClose={() => setCartOpen(false)} onRemove={remove} />}</div>; const isPizza = path.startsWith('/pizza/'); const currentPizza = isPizza ? products.find(p => p.id === path.replace('/pizza/', '').split('/')[0]) : undefined; const isOrderDetails = path.startsWith('/orders/') && path.replace('/orders/', '').trim().length > 0; const currentOrderId = isOrderDetails ? path.replace('/orders/', '').split('/')[0] : undefined; const content = path === '/builder' ? <Builder onAdd={add} /> : path === '/menu' ? <MenuPage onAdd={add} /> : path === '/login' ? <AuthPage /> : path === '/register' ? <AuthPage register /> : path === '/forgot-password' ? <ForgotPassword onNavigate={go} /> : path === '/reset-password' || path.startsWith('/reset-password') ? <ResetPassword onNavigate={go} /> : path === '/verify-email' || path.startsWith('/verify-email') ? <EmailVerification onNavigate={go} /> : isPizza ? <PizzaDetails product={currentPizza} allProducts={products} onAdd={add} onNavigate={go} /> : isOrderDetails && currentOrderId ? <OrderDetails orderId={currentOrderId} onNavigate={go} onAdd={add} allProducts={products} /> : path === '/orders' ? <Orders /> : path === '/profile' ? <Profile onNavigate={go} /> : path === '/order-summary' ? <OrderSummary items={cart} /> : path === '/payment' ? <Payment cart={cart} onNavigate={go} /> : path === '/order-confirmed' ? <main className="confirmation page-shell"><div className="confirmation-mark"><Check size={38} /></div><p className="eyebrow">Payment verified</p><h1>Your pizza is<br /><em>on its way.</em></h1><p>Order #PD-2048 has been sent to our kitchen. We’ll keep you posted as it travels to your door.</p><Button onClick={() => go('/orders')}>Track your order <ArrowRight size={16} /></Button></main> : <Home onAdd={add} />; return <div className="app"><Header cartCount={cart.length} onCart={() => setCartOpen(true)} />{content}<Footer />{cartOpen && <CartDrawer items={cart} onClose={() => setCartOpen(false)} onRemove={remove} />}</div>; }
+function App() {
+  const [path, setPath] = useState(window.location.pathname);
+  const [cart, setCart] = useState<Product[]>(loadInitialCart);
+  const [cartOpen, setCartOpen] = useState(false);
+
+  useEffect(() => {
+    const listener = () => setPath(window.location.pathname);
+    window.addEventListener('popstate', listener);
+    return () => window.removeEventListener('popstate', listener);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const ids = cart.map(item => item.id);
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(ids));
+    } catch {
+      // safely ignore storage write errors
+    }
+  }, [cart]);
+
+  const add = (product: Product) => setCart(items => [...items, product]);
+  const remove = (id: string) => setCart(items => {
+    const index = items.findIndex(item => item.id === id);
+    return index === -1 ? items : [...items.slice(0, index), ...items.slice(index + 1)];
+  });
+  const isAdminOrderDetails = path.startsWith('/admin/orders/') && path.replace('/admin/orders/', '').trim().length > 0;
+  const currentAdminOrderId = isAdminOrderDetails ? path.replace('/admin/orders/', '').split('/')[0] : undefined;
+  if (path === '/admin/login') return <AdminLogin onNavigate={go} />;
+  if (isAdminOrderDetails && currentAdminOrderId) return <AdminOrderDetails orderId={currentAdminOrderId} onNavigate={go} />;
+  if (path.startsWith('/admin')) return <Admin />;
+  if (path === '/dashboard') return <div className="dashboard-shell-container"><CustomerDashboard cartCount={cart.length} cartTotal={cart.reduce((sum, item) => sum + item.price, 0)} onCart={() => setCartOpen(true)} onNavigate={go} onAdd={add} products={products} />{cartOpen && <CartDrawer items={cart} onClose={() => setCartOpen(false)} onRemove={remove} />}</div>;
+  const isPizza = path.startsWith('/pizza/');
+  const currentPizza = isPizza ? products.find(p => p.id === path.replace('/pizza/', '').split('/')[0]) : undefined;
+  const isOrderDetails = path.startsWith('/orders/') && path.replace('/orders/', '').trim().length > 0;
+  const currentOrderId = isOrderDetails ? path.replace('/orders/', '').split('/')[0] : undefined;
+  const content = path === '/builder' ? <Builder onAdd={add} /> : path === '/menu' ? <MenuPage onAdd={add} /> : path === '/login' ? <AuthPage /> : path === '/register' ? <AuthPage register /> : path === '/forgot-password' ? <ForgotPassword onNavigate={go} /> : path === '/reset-password' || path.startsWith('/reset-password') ? <ResetPassword onNavigate={go} /> : path === '/verify-email' || path.startsWith('/verify-email') ? <EmailVerification onNavigate={go} /> : isPizza ? <PizzaDetails product={currentPizza} allProducts={products} onAdd={add} onNavigate={go} /> : isOrderDetails && currentOrderId ? <OrderDetails orderId={currentOrderId} onNavigate={go} onAdd={add} allProducts={products} /> : path === '/orders' ? <Orders /> : path === '/profile' ? <Profile onNavigate={go} /> : path === '/order-summary' ? <OrderSummary items={cart} /> : path === '/payment' ? <Payment cart={cart} onNavigate={go} /> : path === '/order-confirmed' ? <main className="confirmation page-shell"><div className="confirmation-mark"><Check size={38} /></div><p className="eyebrow">Payment verified</p><h1>Your pizza is<br /><em>on its way.</em></h1><p>Order #PD-2048 has been sent to our kitchen. We’ll keep you posted as it travels to your door.</p><Button onClick={() => go('/orders')}>Track your order <ArrowRight size={16} /></Button></main> : <Home onAdd={add} />;
+  return <div className="app"><Header cartCount={cart.length} onCart={() => setCartOpen(true)} />{content}<Footer />{cartOpen && <CartDrawer items={cart} onClose={() => setCartOpen(false)} onRemove={remove} />}</div>;
+}
 
 export default App;
