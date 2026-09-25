@@ -1,0 +1,33 @@
+{
+  "name": "pizza-delivery-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "create-admin": "node scripts/create-admin.js",
+    "seed-pizzas": "node scripts/seed-pizzas.js",
+    "seed-inventory": "node scripts/seed-inventory.js",
+    "check-low-stock": "node scripts/check-low-stock.js",
+    "test": "node --test test/unit/*.test.js",
+    "smoke": "node scripts/smoke-test.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^7.6.0",
+    "mongoose": "^8.19.0",
+    "node-cron": "^4.2.1",
+    "nodemailer": "^7.0.6",
+    "razorpay": "^2.9.6"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}

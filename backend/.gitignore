@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Environment and secrets (never commit secrets)
+.env
+.env.*
+!.env.example
+
+# Logs and debug files
+logs/
+*.log
+npm-debug.log*
+
+# Test coverage
+coverage/
+*.lcov
+.nyc_output/
+
+# OS and IDE files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Documents, reports, and markdown files
+*.docx
+*.doc
+*.pdf
+*_REPORT.md
+*REPORT*.md
+PHASE_*.md
+STEP_*.md
+!README.md
