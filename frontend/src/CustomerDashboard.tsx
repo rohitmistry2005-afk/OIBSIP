@@ -1,22 +1,10 @@
 import { useState, useEffect } from 'react';
 import type { Product } from './PizzaDetails';
-import { getCurrentUser, getStoredUser } from './services/authApi';
+import { getCurrentUser, getStoredUser, isAuthenticated } from './services/authApi';
 import { listMyOrders, BackendOrder } from './services/orderApi';
+import { CustomerLayout } from './CustomerLayout';
 import {
-  Search,
-  Bell,
-  ShoppingBag,
-  ChevronDown,
-  LayoutDashboard,
-  UtensilsCrossed,
-  Sparkles,
-  Receipt,
   Heart,
-  User,
-  Settings,
-  Headphones,
-  HelpCircle,
-  MessageSquare,
   ArrowRight,
   Plus,
   Check,
@@ -26,57 +14,75 @@ import {
   ChefHat,
   Truck,
   CheckCircle2,
-  X,
-  Menu as MenuIcon,
+  Sparkles,
+  UtensilsCrossed,
 } from 'lucide-react';
 
-interface CustomerDashboardProps {
-  cartCount: number;
-  cartTotal: number;
-  onCart: () => void;
+export interface CustomerDashboardProps {
+  cartCount?: number;
+  cartTotal?: number;
+  onCart?: () => void;
   onNavigate: (path: string) => void;
   onAdd: (product: Product) => void;
   products: Product[];
+  hideLayout?: boolean;
 }
 
 export function CustomerDashboard({
-  cartCount,
-  cartTotal,
-  onCart,
+  cartCount = 0,
+  cartTotal = 0,
+  onCart = () => {},
   onNavigate,
   onAdd,
   products,
+  hideLayout = false,
 }: CustomerDashboardProps) {
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [displayName, setDisplayName] = useState('Pizza Lover');
+  const [isAuthed, setIsAuthed] = useState(() => isAuthenticated());
+  const [displayName, setDisplayName] = useState(() => getStoredUser()?.name || '');
   const [showToast, setShowToast] = useState<string | null>(null);
 
   const [activeOrder, setActiveOrder] = useState<BackendOrder | null>(null);
 
   // Derive authenticated customer name and fetch active orders from Express backend
   useEffect(() => {
-    const stored = getStoredUser();
-    if (stored?.name) {
-      setDisplayName(stored.name);
-    }
-
-    getCurrentUser()
-      .then((res) => {
-        if (res.success && res.data?.user?.name) {
-          setDisplayName(res.data.user.name);
+    const syncAuth = () => {
+      const authed = isAuthenticated();
+      setIsAuthed(authed);
+      if (authed) {
+        const stored = getStoredUser();
+        if (stored?.name) {
+          setDisplayName(stored.name);
         }
-      })
-      .catch(() => {});
 
-    listMyOrders()
-      .then((res) => {
-        if (res.success && res.data?.orders?.length) {
-          const active = res.data.orders.find((o) => o.orderStatus !== 'SENT_TO_DELIVERY') || res.data.orders[0];
-          setActiveOrder(active);
-        }
-      })
-      .catch(() => {});
+        getCurrentUser()
+          .then((res) => {
+            if (res.success && res.data?.user?.name) {
+              setDisplayName(res.data.user.name);
+            }
+          })
+          .catch(() => {});
+
+        listMyOrders()
+          .then((res) => {
+            if (res.success && res.data?.orders?.length) {
+              const active = res.data.orders.find((o) => o.orderStatus !== 'SENT_TO_DELIVERY') || res.data.orders[0];
+              setActiveOrder(active);
+            }
+          })
+          .catch(() => {});
+      } else {
+        setDisplayName('');
+        setActiveOrder(null);
+      }
+    };
+
+    syncAuth();
+    window.addEventListener('auth-state-changed', syncAuth);
+    window.addEventListener('storage', syncAuth);
+    return () => {
+      window.removeEventListener('auth-state-changed', syncAuth);
+      window.removeEventListener('storage', syncAuth);
+    };
   }, []);
 
   const triggerNotice = (msg: string) => {
@@ -95,271 +101,8 @@ export function CustomerDashboard({
       ? products.slice(0, 4)
       : products.concat(products.slice(0, 4 - products.length));
 
-  return (
-    <div className="customer-dashboard">
-      {/* Mobile Top Header (<= 720px) */}
-      <header className="dashboard-mobile-header">
-        <button
-          type="button"
-          className="dashboard-mobile-menu-btn"
-          onClick={() => setMobileNavOpen(!mobileNavOpen)}
-          aria-label="Toggle navigation menu"
-        >
-          {mobileNavOpen ? <X size={22} /> : <MenuIcon size={22} />}
-        </button>
-        <button
-          type="button"
-          className="logo"
-          onClick={() => onNavigate('/')}
-          aria-label="PizzaDelight home"
-        >
-          <span className="logo-mark">◒</span>
-          <span>
-            <strong>PizzaDelight</strong>
-          </span>
-        </button>
-        <button
-          type="button"
-          className="cart-button"
-          onClick={onCart}
-          aria-label={`Open cart with ${cartCount} items`}
-        >
-          <ShoppingBag size={20} />
-          <span>{cartCount}</span>
-        </button>
-      </header>
-
-      {/* Left Customer Sidebar */}
-      <aside className={`dashboard-sidebar ${mobileNavOpen ? 'open' : ''}`}>
-        {/* Brand Logo */}
-        <div className="dashboard-sidebar-brand">
-          <button
-            type="button"
-            className="logo"
-            onClick={() => onNavigate('/')}
-            aria-label="PizzaDelight home"
-          >
-            <span className="logo-mark">◒</span>
-            <span>
-              <strong>PizzaDelight</strong>
-              <small>GOOD PIZZA. HAPPIER PEOPLE.</small>
-            </span>
-          </button>
-        </div>
-
-        {/* Navigation List */}
-        <nav className="dashboard-sidebar-nav" aria-label="Customer navigation">
-          <button
-            type="button"
-            className="dashboard-sidebar-item active"
-            onClick={() => {
-              setMobileNavOpen(false);
-              onNavigate('/dashboard');
-            }}
-          >
-            <LayoutDashboard size={18} aria-hidden="true" />
-            <span>Dashboard</span>
-          </button>
-          <button
-            type="button"
-            className="dashboard-sidebar-item"
-            onClick={() => {
-              setMobileNavOpen(false);
-              onNavigate('/menu');
-            }}
-          >
-            <UtensilsCrossed size={18} aria-hidden="true" />
-            <span>Menu</span>
-          </button>
-          <button
-            type="button"
-            className="dashboard-sidebar-item"
-            onClick={() => {
-              setMobileNavOpen(false);
-              onNavigate('/builder');
-            }}
-          >
-            <Sparkles size={18} aria-hidden="true" />
-            <span>Build Your Own</span>
-          </button>
-          <button
-            type="button"
-            className="dashboard-sidebar-item"
-            onClick={() => {
-              setMobileNavOpen(false);
-              onNavigate('/orders');
-            }}
-          >
-            <Receipt size={18} aria-hidden="true" />
-            <span>My Orders</span>
-          </button>
-          <button
-            type="button"
-            className="dashboard-sidebar-item"
-            onClick={() => {
-              setMobileNavOpen(false);
-              triggerNotice('Favorites feature coming soon in our next update!');
-            }}
-          >
-            <Heart size={18} aria-hidden="true" />
-            <span>Favorites</span>
-          </button>
-          <button
-            type="button"
-            className="dashboard-sidebar-item"
-            onClick={() => {
-              setMobileNavOpen(false);
-              onNavigate('/profile');
-            }}
-          >
-            <User size={18} aria-hidden="true" />
-            <span>Profile</span>
-          </button>
-          <button
-            type="button"
-            className="dashboard-sidebar-item"
-            onClick={() => {
-              setMobileNavOpen(false);
-              triggerNotice('Settings options coming soon!');
-            }}
-          >
-            <Settings size={18} aria-hidden="true" />
-            <span>Settings</span>
-          </button>
-        </nav>
-
-        {/* Sidebar Promotional Card */}
-        <div className="dashboard-sidebar-promo">
-          <div className="promo-illustration">
-            <span className="promo-pizza-icon">🍕</span>
-            <p className="promo-handwritten">
-              Good Food
-              <br />
-              Brings People
-              <br />
-              Together <span className="text-brand">♥</span>
-            </p>
-          </div>
-          <div className="promo-photo-wrap">
-            <img
-              src="https://images.pexels.com/photos/1435895/pexels-photo-1435895.jpeg?auto=compress&cs=tinysrgb&h=300&w=300"
-              alt="Fresh tomatoes, basil and olive oil"
-              loading="lazy"
-            />
-          </div>
-        </div>
-
-        {/* Need Help Section */}
-        <div className="dashboard-sidebar-help">
-          <p className="help-heading">Need Help?</p>
-          <button
-            type="button"
-            className="help-link-btn"
-            onClick={() => triggerNotice('Customer support is available via 1800 123 456')}
-          >
-            <Headphones size={15} aria-hidden="true" />
-            <span>Contact Support</span>
-          </button>
-          <button
-            type="button"
-            className="help-link-btn"
-            onClick={() => triggerNotice('FAQs are available in our Help Center')}
-          >
-            <HelpCircle size={15} aria-hidden="true" />
-            <span>FAQs</span>
-          </button>
-          <button
-            type="button"
-            className="help-link-btn"
-            onClick={() => triggerNotice('Live Chat support is active 11 AM - 11 PM')}
-          >
-            <MessageSquare size={15} aria-hidden="true" />
-            <span>Live Chat</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Backdrop overlay for mobile sidebar */}
-      {mobileNavOpen && (
-        <div
-          className="dashboard-sidebar-backdrop"
-          onClick={() => setMobileNavOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Right Main Workspace */}
-      <div className="dashboard-workspace">
-        {/* Top Dashboard Toolbar */}
-        <header className="dashboard-topbar">
-          {/* Search Box */}
-          <div className="dashboard-search-wrap">
-            <Search size={18} className="dashboard-search-icon" aria-hidden="true" />
-            <input
-              type="search"
-              className="dashboard-search-input"
-              placeholder="Search for pizzas, categories..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              aria-label="Search pizzas and categories"
-            />
-          </div>
-
-          {/* Right Toolbar Actions */}
-          <div className="dashboard-topbar-actions">
-            {/* Notification Bell */}
-            <button
-              type="button"
-              className="dashboard-notify-btn"
-              onClick={() => triggerNotice('You have 2 new kitchen updates!')}
-              aria-label="2 notifications"
-            >
-              <Bell size={19} />
-              <span className="notify-badge">2</span>
-            </button>
-
-            {/* Cart Pill Button */}
-            <button
-              type="button"
-              className="dashboard-cart-pill"
-              onClick={onCart}
-              aria-label={`Shopping basket with ${cartCount} items totaling ₹${cartTotal}`}
-            >
-              <div className="cart-pill-icon-wrap">
-                <ShoppingBag size={17} />
-                <span className="cart-pill-count">{cartCount}</span>
-              </div>
-              <strong className="cart-pill-total">
-                ₹{cartTotal.toLocaleString('en-IN')}
-              </strong>
-            </button>
-
-            {/* User Profile Area */}
-            <div
-              className="dashboard-user-area"
-              onClick={() => onNavigate('/profile')}
-              role="button"
-              tabIndex={0}
-              aria-label="View Customer profile"
-            >
-              <img
-                src="https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&h=100&w=100"
-                alt=""
-                className="user-avatar-img"
-              />
-              <div className="user-text-info">
-                <span className="user-greeting-name">
-                  Hi, {displayName}
-                </span>
-                <small className="user-role-label">Pizza Lover</small>
-              </div>
-              <ChevronDown size={14} className="user-chevron" aria-hidden="true" />
-            </div>
-          </div>
-        </header>
-
-        {/* Dashboard Content Container */}
-        <main className="dashboard-content">
+  const dashboardContent = (
+    <main className="dashboard-content">
           {/* Toast Notification */}
           {showToast && (
             <div className="dashboard-toast" role="status">
@@ -371,9 +114,9 @@ export function CustomerDashboard({
           {/* 1. Hero / Welcome Banner */}
           <section className="dashboard-hero-banner" aria-labelledby="dashboard-greeting-title">
             <div className="hero-banner-copy">
-              <p className="hero-time-greeting">Good Evening,</p>
+              <p className="hero-time-greeting">{isAuthed ? 'Good Evening,' : 'Welcome to'}</p>
               <h1 id="dashboard-greeting-title" className="hero-user-heading">
-                {displayName}! <span className="wave-hand">👋</span>
+                {isAuthed ? (displayName ? `${displayName}!` : 'Foodie!') : 'PizzaDelight!'} <span className="wave-hand">🍕</span>
               </h1>
               <p className="hero-subline-1">Craving something delicious today?</p>
               <p className="hero-subline-2">
@@ -840,7 +583,23 @@ export function CustomerDashboard({
             </article>
           </div>
         </main>
-      </div>
-    </div>
+  );
+
+  if (hideLayout) {
+    return dashboardContent;
+  }
+
+  return (
+    <CustomerLayout
+      activePath="/dashboard"
+      onNavigate={onNavigate}
+      cartCount={cartCount}
+      cartTotal={cartTotal}
+      onCart={onCart}
+      products={products}
+      onAdd={onAdd}
+    >
+      {dashboardContent}
+    </CustomerLayout>
   );
 }

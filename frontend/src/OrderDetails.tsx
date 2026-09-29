@@ -2,13 +2,8 @@ import { useState, useEffect } from 'react';
 import type { Product } from './PizzaDetails';
 import { getMyOrder, BackendOrder } from './services/orderApi';
 import {
-  LayoutDashboard,
-  Receipt,
   Heart,
   MapPin,
-  CreditCard,
-  User,
-  Settings,
   ChevronRight,
   RotateCcw,
   MoreHorizontal,
@@ -23,7 +18,7 @@ import {
   ArrowRight,
   Info,
   Clock,
-  MessageCircle,
+  CreditCard,
 } from 'lucide-react';
 
 interface OrderItem {
@@ -511,121 +506,7 @@ export function OrderDetails({
       )}
 
       <div className="order-details-layout">
-        {/* 1. Customer Account Sidebar (Left Column) */}
-        <aside className="order-account-sidebar" aria-label="Account navigation">
-          <nav className="order-sidebar-nav">
-            <button
-              type="button"
-              className="order-sidebar-item"
-              onClick={() => onNavigate('/dashboard')}
-            >
-              <LayoutDashboard size={18} aria-hidden="true" />
-              <span>Dashboard</span>
-            </button>
-            <button
-              type="button"
-              className="order-sidebar-item active"
-              onClick={() => onNavigate('/orders')}
-            >
-              <Receipt size={18} aria-hidden="true" />
-              <span>My Orders</span>
-            </button>
-            <button
-              type="button"
-              className="order-sidebar-item"
-              onClick={() => triggerNotice('Favorites feature is unavailable in this preview.')}
-            >
-              <Heart size={18} aria-hidden="true" />
-              <span>Favorites</span>
-            </button>
-            <button
-              type="button"
-              className="order-sidebar-item"
-              onClick={() => onNavigate('/profile')}
-            >
-              <MapPin size={18} aria-hidden="true" />
-              <span>Addresses</span>
-            </button>
-            <button
-              type="button"
-              className="order-sidebar-item"
-              onClick={() => onNavigate('/profile')}
-            >
-              <CreditCard size={18} aria-hidden="true" />
-              <span>Payment Methods</span>
-            </button>
-            <button
-              type="button"
-              className="order-sidebar-item"
-              onClick={() => onNavigate('/profile')}
-            >
-              <User size={18} aria-hidden="true" />
-              <span>Profile</span>
-            </button>
-            <button
-              type="button"
-              className="order-sidebar-item"
-              onClick={() => triggerNotice('Account settings are currently unavailable in this preview.')}
-            >
-              <Settings size={18} aria-hidden="true" />
-              <span>Settings</span>
-            </button>
-          </nav>
-
-          {/* Sidebar Promotional Card */}
-          <div className="order-sidebar-promo">
-            <div className="promo-tag">
-              <span className="promo-pizza-icon">🍕</span>
-              <p className="promo-handwritten">
-                Good Food
-                <br />
-                Brings People
-                <br />
-                Together <span className="text-brand">♥</span>
-              </p>
-            </div>
-            <div className="promo-photo-wrap">
-              <img
-                src="https://images.pexels.com/photos/1435735/pexels-photo-1435735.jpeg?auto=compress&cs=tinysrgb&h=300&w=300"
-                alt="Fresh farm tomatoes and basil"
-                loading="lazy"
-              />
-            </div>
-          </div>
-
-          {/* Need Help Sidebar Section */}
-          <div className="sidebar-help-box">
-            <h3 className="sidebar-help-title">Need Help?</h3>
-            <div className="sidebar-help-links">
-              <button
-                type="button"
-                className="sidebar-help-link"
-                onClick={() => triggerNotice('Contact our 24/7 support line at 1800 123 456 or help@pizzadelight.com')}
-              >
-                <Clock size={15} className="text-brand" />
-                <span>Contact Support</span>
-              </button>
-              <button
-                type="button"
-                className="sidebar-help-link"
-                onClick={() => triggerNotice('Frequently asked questions are available on our support portal.')}
-              >
-                <HelpCircle size={15} className="text-brand" />
-                <span>FAQs</span>
-              </button>
-              <button
-                type="button"
-                className="sidebar-help-link"
-                onClick={() => triggerNotice('Live chat support is currently unavailable in this preview.')}
-              >
-                <MessageCircle size={15} className="text-brand" />
-                <span>Live Chat</span>
-              </button>
-            </div>
-          </div>
-        </aside>
-
-        {/* 2. Main Order Workspace (Center Column & Right Column) */}
+        {/* Main Order Workspace */}
         <section className="order-workspace">
           {/* Top Breadcrumb */}
           <nav className="order-breadcrumb" aria-label="Breadcrumb">

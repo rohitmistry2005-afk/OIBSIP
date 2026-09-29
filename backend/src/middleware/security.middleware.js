@@ -4,7 +4,7 @@ import { env } from '../config/env.js';
 
 export const securityHeaders = helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false });
 export const globalRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 300, standardHeaders: 'draft-8', legacyHeaders: false, message: { success: false, message: 'Too many requests. Please try again later.' } });
-export const authRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: 'draft-8', legacyHeaders: false, message: { success: false, message: 'Too many authentication attempts. Please try again later.' } });
+export const authRateLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: process.env.AUTH_RATE_LIMIT ? Number(process.env.AUTH_RATE_LIMIT) : 100, standardHeaders: 'draft-8', legacyHeaders: false, message: { success: false, message: 'Too many authentication attempts. Please try again later.' } });
 
 export function validateProductionConfig() {
   if (env.nodeEnv !== 'production') return;

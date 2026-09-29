@@ -50,6 +50,11 @@ export function getUserToken(): string | null {
       removeUserToken();
       return null;
     }
+    const payload = parseJwtPayload(token);
+    if (!payload || payload.type !== 'user' || payload.role === 'admin') {
+      removeUserToken();
+      return null;
+    }
     return token;
   } catch {
     return null;
@@ -85,6 +90,11 @@ export function getAdminToken(): string | null {
     const token = localStorage.getItem(ADMIN_TOKEN_KEY);
     if (!token) return null;
     if (isTokenExpired(token)) {
+      removeAdminToken();
+      return null;
+    }
+    const payload = parseJwtPayload(token);
+    if (!payload || payload.type !== 'admin' || payload.role !== 'admin') {
       removeAdminToken();
       return null;
     }

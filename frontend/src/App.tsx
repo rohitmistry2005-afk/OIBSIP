@@ -1,16 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
+import { AboutPage } from './AboutPage';
 import { ForgotPassword } from './ForgotPassword';
 import { ResetPassword } from './ResetPassword';
 import { EmailVerification } from './EmailVerification';
 import { VerifyOtp } from './VerifyOtp';
 import { PizzaDetails } from './PizzaDetails';
 import { CustomerDashboard } from './CustomerDashboard';
+import { CustomerLayout } from './CustomerLayout';
 import { Profile } from './Profile';
 import { Payment } from './Payment';
 import { OrderDetails } from './OrderDetails';
 import { AdminLogin } from './AdminLogin';
 import { AdminOrderDetails } from './AdminOrderDetails';
 import { AdminInventory } from './AdminInventory';
+import { AdminOrdersList } from './AdminOrdersList';
+import { isAdminAuthenticated } from './services/adminAuth';
 import {
   ArrowRight,
   BarChart3,
@@ -68,6 +72,7 @@ export type Product = {
   description: string;
   price: number;
   image: string;
+  category?: string;
   badge?: string;
   available: boolean;
   customization?: {
@@ -129,11 +134,44 @@ function loadInitialCart(): Product[] {
   }
 }
 
-function go(path: string) {
-  window.history.pushState({}, '', path);
+export function isCustomerProtectedRoute(path: string): boolean {
+  if (!path) return false;
+  const clean = path.split('?')[0].split('#')[0];
+  let normalized = clean;
+  if (normalized === '/build-your-own') normalized = '/builder';
+  if (normalized === '/my-orders') normalized = '/orders';
+  if (normalized === '/account' || normalized === '/addresses' || normalized === '/settings' || normalized === '/favorites') normalized = '/profile';
+
+  return (
+    normalized === '/dashboard' ||
+    normalized === '/menu' ||
+    normalized === '/builder' ||
+    normalized === '/orders' ||
+    normalized === '/profile' ||
+    normalized === '/order-summary' ||
+    normalized === '/payment' ||
+    (normalized.startsWith('/orders/') && normalized.replace('/orders/', '').trim().length > 0) ||
+    normalized.startsWith('/pizza/')
+  );
+}
+
+function go(targetPath: string) {
+  if (isCustomerProtectedRoute(targetPath) && !isAuthenticated()) {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('pizzadelight_redirect_after_auth', targetPath);
+    }
+    const loginUrl = `/login?returnTo=${encodeURIComponent(targetPath)}`;
+    window.history.pushState({}, '', loginUrl);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    window.scrollTo(0, 0);
+    return;
+  }
+
+  window.history.pushState({}, '', targetPath);
   window.dispatchEvent(new PopStateEvent('popstate'));
   window.scrollTo(0, 0);
 }
+
 
 function Logo() {
   return (
@@ -152,11 +190,13 @@ function Header({
   onCart,
   products,
   isHome = false,
+  activePath = '',
 }: {
   cartCount: number;
   onCart: () => void;
   products: Product[];
   isHome?: boolean;
+  activePath?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -241,15 +281,26 @@ function Header({
     });
   };
 
+  const handleNav = (targetPath: string) => {
+    setOpen(false);
+    if (!authed && isCustomerProtectedRoute(targetPath)) {
+      sessionStorage.setItem('pizzadelight_redirect_after_auth', targetPath);
+      go(`/login?returnTo=${encodeURIComponent(targetPath)}`);
+      return;
+    }
+    go(targetPath);
+  };
+
   return (
     <header className={`site-header ${isHome ? 'site-header-home' : ''}`}>
       <div className="header-inner">
         <Logo />
         <nav className={open ? 'nav open' : 'nav'}>
-          <button onClick={() => go('/')}>Menu</button>
-          <button onClick={() => go('/builder')}>Build Your Own</button>
-          <button onClick={() => go('/about')}>About</button>
-          <button onClick={() => go('/orders')}>Track Order</button>
+          <button className={activePath === '/menu' ? 'active' : ''} onClick={() => handleNav('/menu')}>Menu</button>
+          <button className={activePath === '/builder' || activePath === '/build-your-own' ? 'active' : ''} onClick={() => handleNav('/builder')}>Build Your Own</button>
+          <button className={activePath === '/about' ? 'active' : ''} onClick={() => handleNav('/about')}>About</button>
+          <button className={activePath === '/orders' || activePath === '/my-orders' ? 'active' : ''} onClick={() => handleNav('/orders')}>Track Order</button>
+          <button className={activePath.startsWith('/admin') ? 'active' : ''} onClick={() => handleNav('/admin/login')}>Admin Login</button>
         </nav>
         <div className="header-actions">
           <div className="header-search-wrap" ref={searchContainerRef}>
@@ -601,44 +652,29 @@ function Testimonials() {
   );
 }
 
-function Footer() {
+function Footer({ activePath = '' }: { activePath?: string }) {
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+  const [subscribed, setSubscribed] = useState(false);
+
+  const handleSubscribe = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newsletterEmail.trim()) {
+      setSubscribed(true);
+      setNewsletterEmail('');
+      setTimeout(() => setSubscribed(false), 4000);
+    }
+  };
+
   return (
     <footer>
       <div className="footer-top">
-        <div>
+        <div className="footer-col-brand">
           <Logo />
           <p>
-            Crafted with the freshest ingredients, served with love, and made to bring people
-            together.
+            Crafted with fresh ingredients, served with love, and delivered to make
+            every moment happier.
           </p>
-        </div>
-        <div>
-          <h4>Quick Links</h4>
-          <button onClick={() => go('/menu')}>Menu</button>
-          <button onClick={() => go('/builder')}>Build Your Own</button>
-          <button onClick={() => go('/orders')}>Track Order</button>
-          <button onClick={() => go('/about')}>About</button>
-          <button onClick={() => go('/contact')}>Contact</button>
-        </div>
-        <div>
-          <h4>Help & Support</h4>
-          <button onClick={() => go('/about')}>FAQ</button>
-          <button onClick={() => go('/about')}>Shipping & Delivery</button>
-          <button onClick={() => go('/about')}>Returns & Refunds</button>
-          <button onClick={() => go('/about')}>Privacy Policy</button>
-          <button onClick={() => go('/about')}>Terms of Service</button>
-        </div>
-        <div>
-          <h4>Follow Us</h4>
           <div className="footer-social-row">
-            <button
-              type="button"
-              className="footer-social-btn"
-              aria-label="Instagram"
-              onClick={() => window.open('https://instagram.com', '_blank')}
-            >
-              <Instagram size={16} />
-            </button>
             <button
               type="button"
               className="footer-social-btn"
@@ -646,6 +682,14 @@ function Footer() {
               onClick={() => window.open('https://facebook.com', '_blank')}
             >
               <Facebook size={16} />
+            </button>
+            <button
+              type="button"
+              className="footer-social-btn"
+              aria-label="Instagram"
+              onClick={() => window.open('https://instagram.com', '_blank')}
+            >
+              <Instagram size={16} />
             </button>
             <button
               type="button"
@@ -664,33 +708,101 @@ function Footer() {
               <Youtube size={16} />
             </button>
           </div>
-          <div
-            className="footer-promo-card"
-            onClick={() => go('/menu')}
-            role="button"
-            tabIndex={0}
-            aria-label="Love Pizza? Subscribe for offers"
-          >
-            <div className="footer-promo-icon" aria-hidden="true">
-              <Gift size={16} />
-            </div>
-            <div className="footer-promo-text">
-              <strong>Love Pizza?</strong>
-              <small>Subscribe for exclusive offers, new flavors and more!</small>
-            </div>
-            <ArrowRight size={14} className="footer-promo-arrow" aria-hidden="true" />
-          </div>
         </div>
-      </div>
-      <div className="footer-bottom">
-        <span>© 2024 PizzaDelight. All rights reserved.</span>
-        <span>Made with ❤️ for pizza lovers</span>
+
+        <div>
+          <h4>Quick Links</h4>
+          <button className={activePath === '/' ? 'active' : ''} onClick={() => go('/')}>Home</button>
+          <button className={activePath === '/menu' ? 'active' : ''} onClick={() => go('/menu')}>Menu</button>
+          <button className={activePath === '/builder' ? 'active' : ''} onClick={() => go('/builder')}>Build Your Own</button>
+          <button className={activePath === '/about' ? 'active' : ''} onClick={() => go('/about')}>About</button>
+          <button className={activePath === '/orders' ? 'active' : ''} onClick={() => go('/orders')}>Track Order</button>
+        </div>
+
+        <div>
+          <h4>Customer</h4>
+          <button onClick={() => go('/login')}>Login</button>
+          <button onClick={() => go('/register')}>Sign Up</button>
+          <button onClick={() => go('/orders')}>My Orders</button>
+          <button onClick={() => go('/about')}>Help & Support</button>
+          <button onClick={() => go('/about')}>Contact Us</button>
+        </div>
+
+        <div>
+          <h4>Legal</h4>
+          <button onClick={() => go('/about')}>Terms & Conditions</button>
+          <button onClick={() => go('/about')}>Privacy Policy</button>
+          <button onClick={() => go('/about')}>Refund Policy</button>
+          <button onClick={() => go('/about')}>Shipping Policy</button>
+        </div>
+
+        <div>
+          <h4>Stay Updated</h4>
+          <p>Subscribe to get special offers, new menu items and more.</p>
+          <form className="footer-newsletter-row" onSubmit={handleSubscribe}>
+            <input
+              type="email"
+              className="footer-newsletter-input"
+              placeholder="Enter your email"
+              value={newsletterEmail}
+              onChange={(e) => setNewsletterEmail(e.target.value)}
+              required
+              aria-label="Enter your email"
+            />
+            <button type="submit" className="footer-newsletter-btn" aria-label="Subscribe">
+              <ArrowRight size={15} />
+            </button>
+          </form>
+          {subscribed && (
+            <small style={{ color: '#4ade80', display: 'block', marginBottom: '8px' }}>
+              ✓ Subscribed successfully!
+            </small>
+          )}
+          <span className="footer-bottom-copy">© 2026 PizzaDelight. All rights reserved.</span>
+        </div>
       </div>
     </footer>
   );
 }
 
 function MenuPage({ onAdd, products }: { onAdd: (product: Product) => void; products: Product[] }) {
+  const [categoryFilter, setCategoryFilter] = useState<'All' | 'Veg' | 'Non-Veg' | 'Cheese Lovers'>('All');
+  const [sortBy, setSortBy] = useState<'default' | 'price-asc' | 'price-desc'>('default');
+  const [sortOpen, setSortOpen] = useState(false);
+
+  const filteredProducts = products.filter((p) => {
+    if (categoryFilter === 'Veg') {
+      return (
+        (p.category && p.category.toLowerCase().includes('veg') && !p.category.toLowerCase().includes('non')) ||
+        p.name.toLowerCase().includes('veggie') ||
+        p.name.toLowerCase().includes('margherita') ||
+        p.name.toLowerCase().includes('garden') ||
+        p.name.toLowerCase().includes('paneer')
+      );
+    }
+    if (categoryFilter === 'Non-Veg') {
+      return (
+        (p.category && p.category.toLowerCase().includes('non')) ||
+        p.name.toLowerCase().includes('chicken') ||
+        p.name.toLowerCase().includes('pepperoni') ||
+        p.name.toLowerCase().includes('meat')
+      );
+    }
+    if (categoryFilter === 'Cheese Lovers') {
+      return (
+        p.name.toLowerCase().includes('cheese') ||
+        (p.description && p.description.toLowerCase().includes('cheese'))
+      );
+    }
+    return true;
+  });
+
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    if (sortBy === 'price-asc') return a.price - b.price;
+    if (sortBy === 'price-desc') return b.price - a.price;
+    return 0;
+  });
+
   return (
     <main className="page-shell">
       <div className="page-intro">
@@ -702,16 +814,95 @@ function MenuPage({ onAdd, products }: { onAdd: (product: Product) => void; prod
         <p>From familiar favourites to new cravings, every pizza is made fresh to order.</p>
       </div>
       <div className="menu-filter">
-        <strong>All Pizzas</strong>
-        <button>Veg</button>
-        <button>Non-Veg</button>
-        <button>Cheese Lovers</button>
-        <button className="filter-sort">
-          Sort by <ChevronDown size={15} />
+        <strong
+          onClick={() => setCategoryFilter('All')}
+          style={{ cursor: 'pointer', color: categoryFilter === 'All' ? 'var(--red)' : undefined }}
+        >
+          All Pizzas
+        </strong>
+        <button
+          type="button"
+          onClick={() => setCategoryFilter('Veg')}
+          style={{
+            color: categoryFilter === 'Veg' ? 'var(--red)' : undefined,
+            fontWeight: categoryFilter === 'Veg' ? 700 : 500,
+          }}
+        >
+          Veg
         </button>
+        <button
+          type="button"
+          onClick={() => setCategoryFilter('Non-Veg')}
+          style={{
+            color: categoryFilter === 'Non-Veg' ? 'var(--red)' : undefined,
+            fontWeight: categoryFilter === 'Non-Veg' ? 700 : 500,
+          }}
+        >
+          Non-Veg
+        </button>
+        <button
+          type="button"
+          onClick={() => setCategoryFilter('Cheese Lovers')}
+          style={{
+            color: categoryFilter === 'Cheese Lovers' ? 'var(--red)' : undefined,
+            fontWeight: categoryFilter === 'Cheese Lovers' ? 700 : 500,
+          }}
+        >
+          Cheese Lovers
+        </button>
+        <div style={{ position: 'relative', display: 'inline-block' }}>
+          <button
+            type="button"
+            className="filter-sort"
+            onClick={() => setSortOpen(!sortOpen)}
+          >
+            Sort by {sortBy === 'price-asc' ? '(Low to High)' : sortBy === 'price-desc' ? '(High to Low)' : ''} <ChevronDown size={15} />
+          </button>
+          {sortOpen && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 'calc(100% + 4px)',
+                right: 0,
+                background: '#ffffff',
+                border: '1px solid #ede4db',
+                borderRadius: '10px',
+                padding: '6px',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                zIndex: 30,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+                minWidth: '150px',
+              }}
+            >
+              <button
+                type="button"
+                style={{ textAlign: 'left', padding: '6px 10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', borderRadius: '6px' }}
+                onClick={() => { setSortBy('default'); setSortOpen(false); }}
+              >
+                Featured
+              </button>
+              <button
+                type="button"
+                style={{ textAlign: 'left', padding: '6px 10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', borderRadius: '6px' }}
+                onClick={() => { setSortBy('price-asc'); setSortOpen(false); }}
+              >
+                Price: Low to High
+              </button>
+              <button
+                type="button"
+                style={{ textAlign: 'left', padding: '6px 10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', borderRadius: '6px' }}
+                onClick={() => { setSortBy('price-desc'); setSortOpen(false); }}
+              >
+                Price: High to Low
+              </button>
+            </div>
+          )}
+        </div>
       </div>
       <div className="product-grid menu-grid">
-        {products.map((p, i) => (
+        {sortedProducts.map((p, i) => (
           <ProductCard key={`${p.id}-${i}`} product={p} onAdd={onAdd} />
         ))}
       </div>
@@ -719,57 +910,127 @@ function MenuPage({ onAdd, products }: { onAdd: (product: Product) => void; prod
   );
 }
 
+const BASE_IMAGE_MAP: Record<string, string> = {
+  classic: '/images/bases/classic-thin.png',
+  'hand-tossed': '/images/bases/hand-tossed.png',
+  'whole-wheat': '/images/bases/whole-wheat.png',
+  'cheesy-crust': '/images/bases/cheesy-crust.png',
+  'gluten-free': '/images/bases/gluten-free.png',
+};
+
+const SAUCE_IMAGE_MAP: Record<string, string> = {
+  tomato: '/images/sauces/classic-tomato.png',
+  marinara: '/images/sauces/marinara.png',
+  pesto: '/images/sauces/basil-pesto.png',
+  alfredo: '/images/sauces/creamy-alfredo.png',
+  spicy: '/images/sauces/spicy-arrabbiata.png',
+};
+
+const CHEESE_IMAGE_MAP: Record<string, string> = {
+  mozzarella: '/images/cheeses/mozzarella.png',
+  cheddar: '/images/cheeses/cheddar.png',
+  parmesan: '/images/cheeses/parmesan.png',
+  gouda: '/images/cheeses/smoked-gouda.png',
+};
+
+const VEGGIE_IMAGE_MAP: Record<string, string> = {
+  onion: '/images/veggies/onion.png',
+  capsicum: '/images/veggies/capsicum.png',
+  mushroom: '/images/veggies/mushroom.png',
+  corn: '/images/veggies/corn.png',
+  olive: '/images/veggies/olive.png',
+  jalapeno: '/images/veggies/jalapeno.png',
+};
+
 function Builder({ onAdd }: { onAdd: (product: Product) => void }) {
   const [step, setStep] = useState(0);
   const [options, setOptions] = useState<BuilderOptionsData>({
     bases: [
-      { id: 'classic', name: 'Classic Thin', price: 120 },
-      { id: 'hand-tossed', name: 'Hand Tossed', price: 140 },
-      { id: 'whole-wheat', name: 'Whole Wheat', price: 150 },
-      { id: 'cheesy-crust', name: 'Cheesy Crust', price: 180 },
-      { id: 'gluten-free', name: 'Gluten Free', price: 200 },
+      { id: 'classic', name: 'Classic Thin', price: 120, image: '/images/bases/classic-thin.png' },
+      { id: 'hand-tossed', name: 'Hand Tossed', price: 140, image: '/images/bases/hand-tossed.png' },
+      { id: 'whole-wheat', name: 'Whole Wheat', price: 160, image: '/images/bases/whole-wheat.png' },
+      { id: 'cheesy-crust', name: 'Cheesy Crust', price: 180, image: '/images/bases/cheesy-crust.png' },
+      { id: 'gluten-free', name: 'Gluten Free', price: 200, image: '/images/bases/gluten-free.png' },
     ],
     sauces: [
-      { id: 'tomato', name: 'Classic Tomato', price: 0 },
-      { id: 'marinara', name: 'Marinara', price: 15 },
-      { id: 'pesto', name: 'Basil Pesto', price: 25 },
-      { id: 'alfredo', name: 'Creamy Alfredo', price: 30 },
-      { id: 'spicy', name: 'Spicy Arrabbiata', price: 20 },
+      { id: 'tomato', name: 'Classic Tomato', price: 0, image: '/images/sauces/classic-tomato.png' },
+      { id: 'marinara', name: 'Marinara', price: 15, image: '/images/sauces/marinara.png' },
+      { id: 'pesto', name: 'Basil Pesto', price: 25, image: '/images/sauces/basil-pesto.png' },
+      { id: 'alfredo', name: 'Creamy Alfredo', price: 30, image: '/images/sauces/creamy-alfredo.png' },
+      { id: 'spicy', name: 'Spicy Arrabbiata', price: 20, image: '/images/sauces/spicy-arrabbiata.png' },
     ],
     cheeses: [
-      { id: 'mozzarella', name: 'Mozzarella', price: 0 },
-      { id: 'cheddar', name: 'Cheddar', price: 20 },
-      { id: 'parmesan', name: 'Parmesan', price: 30 },
-      { id: 'gouda', name: 'Smoked Gouda', price: 35 },
+      { id: 'mozzarella', name: 'Mozzarella', price: 0, image: '/images/cheeses/mozzarella.png' },
+      { id: 'cheddar', name: 'Cheddar', price: 20, image: '/images/cheeses/cheddar.png' },
+      { id: 'parmesan', name: 'Parmesan', price: 30, image: '/images/cheeses/parmesan.png' },
+      { id: 'gouda', name: 'Smoked Gouda', price: 35, image: '/images/cheeses/smoked-gouda.png' },
     ],
     vegetables: [
-      { id: 'onion', name: 'Onion', price: 15 },
-      { id: 'capsicum', name: 'Capsicum', price: 15 },
-      { id: 'mushroom', name: 'Mushroom', price: 20 },
-      { id: 'corn', name: 'Sweet Corn', price: 20 },
-      { id: 'olive', name: 'Black Olive', price: 25 },
-      { id: 'jalapeno', name: 'Jalapeño', price: 20 },
+      { id: 'onion', name: 'Onion', price: 15, image: '/images/veggies/onion.png' },
+      { id: 'capsicum', name: 'Capsicum', price: 15, image: '/images/veggies/capsicum.png' },
+      { id: 'mushroom', name: 'Mushroom', price: 20, image: '/images/veggies/mushroom.png' },
+      { id: 'corn', name: 'Sweet Corn', price: 20, image: '/images/veggies/corn.png' },
+      { id: 'olive', name: 'Black Olive', price: 25, image: '/images/veggies/olive.png' },
+      { id: 'jalapeno', name: 'Jalapeño', price: 20, image: '/images/veggies/jalapeno.png' },
     ],
   });
 
-  const [selectedBase, setSelectedBase] = useState<BuilderOption>({ id: 'classic', name: 'Classic Thin', price: 120 });
-  const [selectedSauce, setSelectedSauce] = useState<BuilderOption>({ id: 'tomato', name: 'Classic Tomato', price: 0 });
-  const [selectedCheese, setSelectedCheese] = useState<BuilderOption>({ id: 'mozzarella', name: 'Mozzarella', price: 0 });
+  const [selectedBase, setSelectedBase] = useState<BuilderOption>({
+    id: 'classic',
+    name: 'Classic Thin',
+    price: 120,
+    image: '/images/bases/classic-thin.png',
+  });
+  const [selectedSauce, setSelectedSauce] = useState<BuilderOption>({
+    id: 'tomato',
+    name: 'Classic Tomato',
+    price: 0,
+    image: '/images/sauces/classic-tomato.png',
+  });
+  const [selectedCheese, setSelectedCheese] = useState<BuilderOption>({
+    id: 'mozzarella',
+    name: 'Mozzarella',
+    price: 0,
+    image: '/images/cheeses/mozzarella.png',
+  });
   const [selectedVeggies, setSelectedVeggies] = useState<BuilderOption[]>([
-    { id: 'onion', name: 'Onion', price: 15 },
-    { id: 'capsicum', name: 'Capsicum', price: 15 },
+    { id: 'onion', name: 'Onion', price: 15, image: '/images/veggies/onion.png' },
+    { id: 'capsicum', name: 'Capsicum', price: 15, image: '/images/veggies/capsicum.png' },
   ]);
 
   useEffect(() => {
     getBuilderOptions()
       .then((res) => {
         if (res.success && res.data?.options) {
-          setOptions(res.data.options);
-          if (res.data.options.bases[0]) setSelectedBase(res.data.options.bases[0]);
-          if (res.data.options.sauces[0]) setSelectedSauce(res.data.options.sauces[0]);
-          if (res.data.options.cheeses[0]) setSelectedCheese(res.data.options.cheeses[0]);
-          if (res.data.options.vegetables.length >= 2) {
-            setSelectedVeggies([res.data.options.vegetables[0], res.data.options.vegetables[1]]);
+          const mergedBases = res.data.options.bases.map((b) => ({
+            ...b,
+            image: b.image || BASE_IMAGE_MAP[b.id],
+          }));
+          const mergedSauces = res.data.options.sauces.map((s) => ({
+            ...s,
+            image: s.image || SAUCE_IMAGE_MAP[s.id],
+          }));
+          const mergedCheeses = res.data.options.cheeses.map((c) => ({
+            ...c,
+            image: c.image || CHEESE_IMAGE_MAP[c.id],
+          }));
+          const mergedVeggies = res.data.options.vegetables.map((v) => ({
+            ...v,
+            image: v.image || VEGGIE_IMAGE_MAP[v.id],
+          }));
+          const updatedOptions = {
+            ...res.data.options,
+            bases: mergedBases,
+            sauces: mergedSauces,
+            cheeses: mergedCheeses,
+            vegetables: mergedVeggies,
+          };
+          setOptions(updatedOptions);
+          if (updatedOptions.bases[0]) setSelectedBase(updatedOptions.bases[0]);
+          if (updatedOptions.sauces[0]) setSelectedSauce(updatedOptions.sauces[0]);
+          if (updatedOptions.cheeses[0]) setSelectedCheese(updatedOptions.cheeses[0]);
+          if (updatedOptions.vegetables.length >= 2) {
+            setSelectedVeggies([updatedOptions.vegetables[0], updatedOptions.vegetables[1]]);
           }
         }
       })
@@ -864,29 +1125,46 @@ function Builder({ onAdd }: { onAdd: (product: Product) => void }) {
             <span>{step + 1} of 4</span>
           </div>
           <div className="options-grid">
-            {stepsMeta[step].options.map((option, i) => (
-              <button
-                className={isSelected(option) ? 'ingredient selected' : 'ingredient'}
-                onClick={() => choose(option)}
-                key={option.id}
-              >
-                <div className={`ingredient-art art-${i % 4}`}>
-                  <Sparkles size={25} />
-                </div>
-                <div>
-                  <strong>{option.name}</strong>
-                  <small>
-                    ₹{option.price}
-                    {option.price === 0 ? ' (Included)' : ''}
-                  </small>
-                </div>
-                {isSelected(option) && (
-                  <span className="checkmark">
-                    <Check size={14} />
-                  </span>
-                )}
-              </button>
-            ))}
+            {stepsMeta[step].options.map((option, i) => {
+              const optionImage =
+                option.image ||
+                (step === 0
+                  ? BASE_IMAGE_MAP[option.id]
+                  : step === 1
+                    ? SAUCE_IMAGE_MAP[option.id]
+                    : step === 2
+                      ? CHEESE_IMAGE_MAP[option.id]
+                      : step === 3
+                        ? VEGGIE_IMAGE_MAP[option.id]
+                        : undefined);
+              return (
+                <button
+                  className={isSelected(option) ? 'ingredient selected' : 'ingredient'}
+                  onClick={() => choose(option)}
+                  key={option.id}
+                >
+                  <div className={`ingredient-art ${optionImage ? 'has-img' : `art-${i % 4}`}`}>
+                    {optionImage ? (
+                      <img src={optionImage} alt={option.name} className="ingredient-img" />
+                    ) : (
+                      <Sparkles size={25} />
+                    )}
+                  </div>
+                  <div>
+                    <strong>{option.name}</strong>
+                    <small>
+                      ₹{option.price}
+                      {option.price === 0 ? ' (Included)' : ''}
+                    </small>
+                  </div>
+                  {isSelected(option) && (
+                    <span className="checkmark">
+                      <Check size={14} />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
           <div className="builder-nav">
             <button className="text-link" disabled={step === 0} onClick={() => setStep(step - 1)}>
@@ -1411,9 +1689,19 @@ const adminNavItems = [
   { id: 'Settings', label: 'Settings', icon: Settings },
 ];
 
-function Admin() {
-  const [tab, setTab] = useState('Dashboard');
+function Admin({
+  activeRoute = 'Dashboard',
+  onNavigate,
+}: {
+  activeRoute?: string;
+  onNavigate: (path: string) => void;
+}) {
+  const [tab, setTab] = useState(activeRoute);
   const [orders, setOrders] = useState<BackendOrder[]>([]);
+
+  useEffect(() => {
+    setTab(activeRoute);
+  }, [activeRoute]);
 
   useEffect(() => {
     getAdminOrders()
@@ -1441,7 +1729,12 @@ function Admin() {
             <button
               type="button"
               className={tab === id ? 'admin-nav active' : 'admin-nav'}
-              onClick={() => setTab(id)}
+              onClick={() => {
+                setTab(id);
+                if (id === 'Dashboard') onNavigate('/admin');
+                else if (id === 'Orders') onNavigate('/admin/orders');
+                else if (id === 'Inventory') onNavigate('/admin/inventory');
+              }}
               key={id}
             >
               <Icon size={17} />
@@ -1474,7 +1767,7 @@ function Admin() {
           className="admin-nav admin-logout-btn"
           onClick={() => {
             logoutAdmin();
-            go('/admin/login');
+            onNavigate('/admin/login');
           }}
         >
           <LogOut size={17} />
@@ -1483,7 +1776,20 @@ function Admin() {
       </aside>
       <section className={`admin-content ${tab === 'Inventory' ? 'inventory-content' : ''}`}>
         {tab === 'Inventory' ? (
-          <AdminInventory onNavigate={go} />
+          <AdminInventory onNavigate={onNavigate} />
+        ) : tab === 'Orders' ? (
+          <AdminOrdersList
+            onNavigate={onNavigate}
+            onOrderCountChange={(count) => {
+              if (count !== orders.length) {
+                getAdminOrders()
+                  .then((res) => {
+                    if (res.success && res.data?.orders) setOrders(res.data.orders);
+                  })
+                  .catch(() => {});
+              }
+            }}
+          />
         ) : (
           <>
             <div className="admin-top">
@@ -1524,7 +1830,13 @@ function Admin() {
                         <p className="eyebrow">Live operations</p>
                         <h2>Recent orders</h2>
                       </div>
-                      <button className="text-link" onClick={() => setTab('Orders')}>
+                      <button
+                        className="text-link"
+                        onClick={() => {
+                          setTab('Orders');
+                          onNavigate('/admin/orders');
+                        }}
+                      >
                         View all <ArrowRight size={15} />
                       </button>
                     </div>
@@ -1548,7 +1860,7 @@ function Admin() {
                             return (
                               <tr
                                 key={orderId}
-                                onClick={() => go(`/admin/orders/${orderId}`)}
+                                onClick={() => onNavigate(`/admin/orders/${orderId}`)}
                                 style={{ cursor: 'pointer' }}
                               >
                                 <td>
@@ -1597,54 +1909,11 @@ function Admin() {
                     <p className="eyebrow">Operations</p>
                     <h2>{tab} overview</h2>
                   </div>
-                  <Button><Plus size={16} /> Add new</Button>
                 </div>
-                <div style={{ margin: '16px 0', overflowX: 'auto' }}>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Order</th>
-                        <th>Customer</th>
-                        <th>Amount</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {orders.length > 0 ? (
-                        orders.map((ord) => {
-                          const orderId = String(ord.id || ord._id);
-                          const customerName =
-                            typeof ord.user === 'object' && ord.user?.name
-                              ? ord.user.name
-                              : 'Customer';
-                          return (
-                            <tr
-                              key={orderId}
-                              onClick={() => go(`/admin/orders/${orderId}`)}
-                              style={{ cursor: 'pointer' }}
-                            >
-                              <td>
-                                <strong>#{orderId.slice(-8).toUpperCase()}</strong>
-                              </td>
-                              <td>{customerName}</td>
-                              <td>₹{ord.totalAmount}</td>
-                              <td>
-                                <span className="table-status">
-                                  {ord.orderStatus.replace(/_/g, ' ')}
-                                </span>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      ) : (
-                        <tr>
-                          <td colSpan={4} style={{ textAlign: 'center', padding: '24px' }}>
-                            No orders found.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                <div style={{ padding: '28px 0', textAlign: 'center' }}>
+                  <p style={{ color: '#78716c' }}>
+                    {tab} module is active. Use navigation to manage Orders and Inventory.
+                  </p>
                 </div>
               </div>
             )}
@@ -1786,15 +2055,58 @@ function OrderSummary({ items }: { items: Product[]; products: Product[] }) {
 }
 
 function App() {
-  const [path, setPath] = useState(window.location.pathname);
+  const [path, setPath] = useState(() => {
+    if (typeof window === 'undefined') return '/';
+    const current = window.location.pathname;
+    if (isCustomerProtectedRoute(current) && !isAuthenticated()) {
+      const fullDest = current + (window.location.search || '');
+      sessionStorage.setItem('pizzadelight_redirect_after_auth', fullDest);
+      const loginUrl = `/login?returnTo=${encodeURIComponent(fullDest)}`;
+      window.history.replaceState({}, '', loginUrl);
+      return '/login';
+    }
+    return current;
+  });
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [cart, setCart] = useState<Product[]>(loadInitialCart);
   const [cartOpen, setCartOpen] = useState(false);
+  const [, setAuthed] = useState(() => isAuthenticated());
 
   useEffect(() => {
-    const listener = () => setPath(window.location.pathname);
-    window.addEventListener('popstate', listener);
-    return () => window.removeEventListener('popstate', listener);
+    const handlePopState = () => {
+      const current = window.location.pathname;
+      if (isCustomerProtectedRoute(current) && !isAuthenticated()) {
+        const fullDest = current + (window.location.search || '');
+        sessionStorage.setItem('pizzadelight_redirect_after_auth', fullDest);
+        const loginUrl = `/login?returnTo=${encodeURIComponent(fullDest)}`;
+        window.history.replaceState({}, '', loginUrl);
+        setPath('/login');
+      } else {
+        setPath(current);
+      }
+    };
+
+    const handleAuthChange = () => {
+      const isAuth = isAuthenticated();
+      setAuthed(isAuth);
+      const current = window.location.pathname;
+      if (!isAuth && isCustomerProtectedRoute(current)) {
+        const fullDest = current + (window.location.search || '');
+        sessionStorage.setItem('pizzadelight_redirect_after_auth', fullDest);
+        const loginUrl = `/login?returnTo=${encodeURIComponent(fullDest)}`;
+        window.history.replaceState({}, '', loginUrl);
+        setPath('/login');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('auth-state-changed', handleAuthChange);
+    window.addEventListener('storage', handleAuthChange);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('auth-state-changed', handleAuthChange);
+      window.removeEventListener('storage', handleAuthChange);
+    };
   }, []);
 
   // Fetch backend pizzas on mount
@@ -1854,26 +2166,56 @@ function App() {
     ? path.replace('/admin/orders/', '').split('/')[0]
     : undefined;
 
-  if (path === '/admin/login') return <AdminLogin onNavigate={go} />;
-  if (isAdminOrderDetails && currentAdminOrderId)
-    return <AdminOrderDetails orderId={currentAdminOrderId} onNavigate={go} />;
-  if (path.startsWith('/admin')) return <Admin />;
-  if (path === '/dashboard')
-    return (
-      <div className="dashboard-shell-container">
-        <CustomerDashboard
-          cartCount={cart.length}
-          cartTotal={cart.reduce((sum, item) => sum + item.price, 0)}
-          onCart={() => setCartOpen(true)}
-          onNavigate={go}
-          onAdd={add}
-          products={products}
-        />
-        {cartOpen && (
-          <CartDrawer items={cart} onClose={() => setCartOpen(false)} onRemove={remove} />
-        )}
-      </div>
-    );
+  // Admin Route Guards & Navigation
+  if (path === '/admin/login') {
+    if (isAdminAuthenticated()) {
+      go('/admin');
+      return null;
+    }
+    return <AdminLogin onNavigate={go} />;
+  }
+
+  if (path.startsWith('/admin')) {
+    if (!isAdminAuthenticated()) {
+      go('/admin/login');
+      return null;
+    }
+
+    if (isAdminOrderDetails && currentAdminOrderId) {
+      return <AdminOrderDetails orderId={currentAdminOrderId} onNavigate={go} />;
+    }
+
+    const currentAdminTab =
+      path === '/admin/orders'
+        ? 'Orders'
+        : path === '/admin/inventory'
+        ? 'Inventory'
+        : 'Dashboard';
+
+    return <Admin activeRoute={currentAdminTab} onNavigate={go} />;
+  }
+  // Public Auth Pages Guard (redirect authenticated customers away from login/register)
+  if (path === '/login' || path === '/register' || path === '/signup') {
+    if (isAuthenticated()) {
+      const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      const queryReturnTo = urlParams?.get('returnTo');
+      const safeReturnTo = queryReturnTo && queryReturnTo.startsWith('/') && !queryReturnTo.startsWith('//') ? queryReturnTo : '/dashboard';
+      go(safeReturnTo);
+      return null;
+    }
+    return <AuthPage register={path === '/register' || path === '/signup'} />;
+  }
+
+  // Hard Customer Route Guard: under NO circumstances render any customer protected page if unauthenticated
+  if (isCustomerProtectedRoute(path) && !isAuthenticated()) {
+    const currentQuery = typeof window !== 'undefined' ? window.location.search : '';
+    const fullDest = path + (currentQuery && !path.includes('?') ? currentQuery : '');
+    sessionStorage.setItem('pizzadelight_redirect_after_auth', fullDest);
+    const loginUrl = `/login?returnTo=${encodeURIComponent(fullDest)}`;
+    window.history.replaceState({}, '', loginUrl);
+    setPath('/login');
+    return null;
+  }
 
   const isPizza = path.startsWith('/pizza/');
   const currentPizza = isPizza
@@ -1891,11 +2233,74 @@ function App() {
         'PD-2048'
       : 'PD-2048';
 
+  let activeCustomerPath = path;
+  if (path === '/build-your-own') activeCustomerPath = '/builder';
+  if (path === '/my-orders') activeCustomerPath = '/orders';
+  if (path === '/account' || path === '/addresses' || path === '/settings' || path === '/favorites') activeCustomerPath = '/profile';
+
+  const isCustomerPage =
+    activeCustomerPath === '/dashboard' ||
+    activeCustomerPath === '/menu' ||
+    activeCustomerPath === '/builder' ||
+    activeCustomerPath === '/orders' ||
+    activeCustomerPath === '/profile' ||
+    (isOrderDetails && Boolean(currentOrderId));
+
+  if (isCustomerPage) {
+    if (!isAuthenticated()) {
+      return null;
+    }
+    const cartTotal = cart.reduce((sum, item) => sum + item.price, 0);
+    return (
+      <div className="dashboard-shell-container">
+        <CustomerLayout
+          activePath={activeCustomerPath}
+          onNavigate={go}
+          cartCount={cart.length}
+          cartTotal={cartTotal}
+          onCart={() => setCartOpen(true)}
+          products={products}
+          onAdd={add}
+          onLogout={() => {
+            logoutUser();
+            setAuthed(false);
+            go('/');
+          }}
+        >
+          {activeCustomerPath === '/dashboard' && (
+            <CustomerDashboard
+              cartCount={cart.length}
+              cartTotal={cartTotal}
+              onCart={() => setCartOpen(true)}
+              onNavigate={go}
+              onAdd={add}
+              products={products}
+              hideLayout
+            />
+          )}
+          {activeCustomerPath === '/menu' && <MenuPage onAdd={add} products={products} />}
+          {activeCustomerPath === '/builder' && <Builder onAdd={add} />}
+          {activeCustomerPath === '/orders' && <Orders />}
+          {activeCustomerPath === '/profile' && <Profile onNavigate={go} />}
+          {isOrderDetails && currentOrderId && (
+            <OrderDetails
+              orderId={currentOrderId}
+              onNavigate={go}
+              onAdd={add}
+              allProducts={products}
+            />
+          )}
+        </CustomerLayout>
+        {cartOpen && (
+          <CartDrawer items={cart} onClose={() => setCartOpen(false)} onRemove={remove} />
+        )}
+      </div>
+    );
+  }
+
   const content =
-    path === '/builder' ? (
-      <Builder onAdd={add} />
-    ) : path === '/menu' ? (
-      <MenuPage onAdd={add} products={products} />
+    path === '/about' ? (
+      <AboutPage onNavigate={go} />
     ) : path === '/login' ? (
       <AuthPage />
     ) : path === '/register' || path === '/signup' ? (
@@ -1915,17 +2320,6 @@ function App() {
         onAdd={add}
         onNavigate={go}
       />
-    ) : isOrderDetails && currentOrderId ? (
-      <OrderDetails
-        orderId={currentOrderId}
-        onNavigate={go}
-        onAdd={add}
-        allProducts={products}
-      />
-    ) : path === '/orders' ? (
-      <Orders />
-    ) : path === '/profile' ? (
-      <Profile onNavigate={go} />
     ) : path === '/order-summary' ? (
       <OrderSummary items={cart} products={products} />
     ) : path === '/payment' ? (
@@ -1957,10 +2351,11 @@ function App() {
         cartCount={cart.length}
         onCart={() => setCartOpen(true)}
         products={products}
-        isHome={path === '/' || path === '' || path === '/about'}
+        isHome={path === '/' || path === ''}
+        activePath={path}
       />
       {content}
-      <Footer />
+      <Footer activePath={path} />
       {cartOpen && (
         <CartDrawer items={cart} onClose={() => setCartOpen(false)} onRemove={remove} />
       )}

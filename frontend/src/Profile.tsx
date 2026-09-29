@@ -1,21 +1,16 @@
 import { useState, useEffect } from 'react';
-import { updateUserProfile, getCurrentUser, getStoredUser } from './services/auth';
+import { updateUserProfile, getCurrentUser, getStoredUser, isAuthenticated } from './services/auth';
 import {
   Home,
   ChevronRight,
-  LayoutDashboard,
-  Receipt,
   Heart,
   MapPin,
   CreditCard,
   User,
-  Bell,
-  Settings,
   Camera,
   Crown,
   Mail,
   Phone,
-  ArrowRight,
   ShieldCheck,
   Sliders,
   Sparkles,
@@ -26,6 +21,7 @@ import {
   ShoppingBag,
   Star,
   Info,
+  Bell,
 } from 'lucide-react';
 
 interface ProfileProps {
@@ -35,9 +31,9 @@ interface ProfileProps {
 export function Profile({ onNavigate }: ProfileProps) {
   const [activeTab, setActiveTab] = useState<'personal' | 'addresses' | 'payment' | 'preferences' | 'security'>('personal');
   
-  // Safe presentation fallbacks (not claiming verified customer backend data)
-  const [fullName, setFullName] = useState('Valued Customer');
-  const [email, setEmail] = useState('customer@example.com');
+  const initialUser = getStoredUser();
+  const [fullName, setFullName] = useState(() => initialUser?.name || '');
+  const [email, setEmail] = useState(() => initialUser?.email || '');
   const [phone, setPhone] = useState('98765 43210');
   const [dob, setDob] = useState('2000-01-01');
   const [gender, setGender] = useState('Prefer not to say');
@@ -115,98 +111,8 @@ export function Profile({ onNavigate }: ProfileProps) {
         </div>
       )}
 
-      {/* Main 2-Column Shell */}
+      {/* Main Profile Workspace */}
       <div className="profile-shell-layout">
-        {/* 1. Left Customer Account Sidebar */}
-        <aside className="profile-sidebar" aria-label="Account navigation">
-          <nav className="profile-sidebar-nav">
-            <button
-              type="button"
-              className="profile-sidebar-item"
-              onClick={() => onNavigate('/dashboard')}
-            >
-              <LayoutDashboard size={18} aria-hidden="true" />
-              <span>Dashboard</span>
-            </button>
-            <button
-              type="button"
-              className="profile-sidebar-item"
-              onClick={() => onNavigate('/orders')}
-            >
-              <Receipt size={18} aria-hidden="true" />
-              <span>My Orders</span>
-            </button>
-            <button
-              type="button"
-              className="profile-sidebar-item"
-              onClick={() => triggerNotice('Favorites feature is unavailable in this preview.')}
-            >
-              <Heart size={18} aria-hidden="true" />
-              <span>Favorites</span>
-            </button>
-            <button
-              type="button"
-              className={`profile-sidebar-item ${activeTab === 'addresses' ? 'active' : ''}`}
-              onClick={() => setActiveTab('addresses')}
-            >
-              <MapPin size={18} aria-hidden="true" />
-              <span>Addresses</span>
-            </button>
-            <button
-              type="button"
-              className={`profile-sidebar-item ${activeTab === 'payment' ? 'active' : ''}`}
-              onClick={() => setActiveTab('payment')}
-            >
-              <CreditCard size={18} aria-hidden="true" />
-              <span>Payment Methods</span>
-            </button>
-            <button
-              type="button"
-              className={`profile-sidebar-item ${activeTab === 'personal' ? 'active' : ''}`}
-              onClick={() => setActiveTab('personal')}
-            >
-              <User size={18} aria-hidden="true" />
-              <span>Profile</span>
-            </button>
-            <button
-              type="button"
-              className="profile-sidebar-item"
-              onClick={() => triggerNotice('Notifications are currently unavailable in this preview.')}
-            >
-              <Bell size={18} aria-hidden="true" />
-              <span>Notifications</span>
-            </button>
-            <button
-              type="button"
-              className="profile-sidebar-item"
-              onClick={() => triggerNotice('Account settings are currently unavailable in this preview.')}
-            >
-              <Settings size={18} aria-hidden="true" />
-              <span>Settings</span>
-            </button>
-          </nav>
-
-          {/* Promotional Card at bottom of sidebar */}
-          <div className="profile-sidebar-promo">
-            <div className="promo-tag">
-              <span className="promo-pizza-icon">🍕</span>
-              <p className="promo-handwritten">
-                Good Food
-                <br />
-                Better You <span className="text-brand">♥</span>
-              </p>
-            </div>
-            <div className="promo-photo-wrap">
-              <img
-                src="https://images.pexels.com/photos/12096782/pexels-photo-12096782.jpeg?auto=compress&cs=tinysrgb&h=300&w=300"
-                alt="Fresh artisan pizza slice"
-                loading="lazy"
-              />
-            </div>
-          </div>
-        </aside>
-
-        {/* 2. Main Profile Workspace */}
         <section className="profile-workspace">
           {/* Breadcrumb */}
           <nav className="profile-breadcrumb" aria-label="Breadcrumb">
@@ -296,23 +202,6 @@ export function Profile({ onNavigate }: ProfileProps) {
               >
                 <Camera size={15} aria-hidden="true" />
                 <span>Edit Photo</span>
-              </button>
-            </div>
-
-            {/* Premium Member Callout Card */}
-            <div className="premium-member-card">
-              <div className="premium-icon-badge">
-                <Crown size={22} className="text-brand" aria-hidden="true" />
-              </div>
-              <h3>You&apos;re a Premium Member!</h3>
-              <p>Enjoy exclusive offers, faster checkout and more benefits.</p>
-              <button
-                type="button"
-                className="button button-outline premium-view-btn"
-                onClick={() => triggerNotice('Membership tier benefits: 10% off custom crusts & free delivery on orders above ₹499.')}
-              >
-                <span>View Benefits</span>
-                <ArrowRight size={15} aria-hidden="true" />
               </button>
             </div>
           </div>

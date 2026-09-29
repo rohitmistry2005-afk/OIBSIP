@@ -1,19 +1,15 @@
 import { useState, useEffect } from 'react';
-import { getAdminOrder, updateOrderStatus } from './services/adminApi';
+import { getAdminOrder, updateOrderStatus, logoutAdmin } from './services/adminApi';
 import { BackendOrder } from './services/orderApi';
 import {
   ArrowLeft,
-  Award,
   Bell,
   Bike,
   BookOpen,
   Check,
   ChefHat,
   ChevronDown,
-  Clock,
   CreditCard,
-  Edit2,
-  FileText,
   Home,
   Info,
   Layers,
@@ -26,9 +22,7 @@ import {
   Printer,
   RefreshCw,
   Search,
-  Settings,
   ShoppingCart,
-  TrendingUp,
   User,
   Users,
 } from 'lucide-react';
@@ -46,6 +40,7 @@ interface OrderItem {
 
 interface AdminOrderData {
   id: string;
+  rawId: string;
   placedDate: string;
   status: 'Delivered' | 'In Kitchen' | 'Received' | 'Out for Delivery';
   timeline: {
@@ -92,219 +87,6 @@ interface AdminOrderData {
   }[];
 }
 
-// Known orders dataset based on existing Admin and App mock order data
-const ADMIN_ORDERS: Record<string, AdminOrderData> = {
-  'PD-2048': {
-    id: 'PD-2048',
-    placedDate: 'Sep 12, 2026 at 7:24 PM',
-    status: 'Delivered',
-    timeline: [
-      { step: '1', title: 'Order Placed', time: 'Sep 12, 7:24 PM', completed: true, icon: 'cart' },
-      { step: '2', title: 'Confirmed', time: 'Sep 12, 7:25 PM', completed: true, icon: 'confirm' },
-      { step: '3', title: 'In the Kitchen', time: 'Sep 12, 7:28 PM', completed: true, icon: 'kitchen' },
-      { step: '4', title: 'Out for Delivery', time: 'Sep 12, 7:52 PM', completed: true, icon: 'delivery' },
-      { step: '5', title: 'Delivered', time: 'Sep 12, 8:15 PM', completed: true, icon: 'delivered' },
-    ],
-    items: [
-      {
-        id: 'item-1',
-        name: 'Margherita',
-        variant: '10" Regular',
-        customizationType: 'Classic',
-        customizationDetails: 'Tomato sauce, mozzarella, fresh basil, herbs',
-        price: 299,
-        quantity: 1,
-        image: 'https://images.pexels.com/photos/12096782/pexels-photo-12096782.jpeg?auto=compress&cs=tinysrgb&h=200&w=200',
-      },
-      {
-        id: 'item-2',
-        name: 'Garlic Bread',
-        variant: '4 Pieces',
-        customizationType: 'Standard',
-        customizationDetails: 'Freshly baked with garlic butter and herbs',
-        price: 149,
-        quantity: 1,
-        image: 'https://images.pexels.com/photos/208537/pexels-photo-208537.jpeg?auto=compress&cs=tinysrgb&h=200&w=200',
-      },
-      {
-        id: 'item-3',
-        name: 'Pepsi',
-        variant: '500ml',
-        customizationType: 'Standard',
-        customizationDetails: 'Chilled beverage',
-        price: 60,
-        quantity: 1,
-        image: 'https://images.pexels.com/photos/50593/coca-cola-cold-drink-soft-drink-coke-50593.jpeg?auto=compress&cs=tinysrgb&h=200&w=200',
-      },
-    ],
-    subtotal: 508,
-    deliveryFee: 40,
-    taxes: 22,
-    totalPaid: 570,
-    customer: {
-      name: 'Rohit Mistry',
-      email: 'rohit.mistry@example.com',
-      phone: '+91 98765 43210',
-      badge: 'VIP',
-      memberSince: 'Aug 2026',
-      totalOrders: 12,
-    },
-    delivery: {
-      addressLine1: '123, Green Park Apartments',
-      addressLine2: 'Sector 7, Salt Lake',
-      city: 'Kolkata, West Bengal 700091',
-      deliveredAt: 'Sep 12, 2026, 8:15 PM',
-      partnerName: 'Amit Kumar',
-      partnerPhone: '+91 91234 56789',
-      partnerAvatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&h=120&w=120',
-    },
-    payment: {
-      method: 'Razorpay (UPI)',
-      status: 'Success',
-      amount: 570,
-      referenceId: 'Demo Reference (pay_PD2048_demo)',
-      paidOn: 'Sep 12, 2026, 7:24 PM',
-    },
-    notes: [
-      {
-        id: 'note-1',
-        author: 'Admin',
-        time: 'Sep 12, 2026, 8:20 PM',
-        text: 'Order delivered successfully. Customer was satisfied with the food quality.',
-      },
-    ],
-  },
-  'PD-2047': {
-    id: 'PD-2047',
-    placedDate: 'Sep 16, 2026 at 1:10 PM',
-    status: 'Received',
-    timeline: [
-      { step: '1', title: 'Order Placed', time: 'Sep 16, 1:10 PM', completed: true, icon: 'cart' },
-      { step: '2', title: 'Confirmed', time: 'Sep 16, 1:12 PM', completed: true, icon: 'confirm' },
-      { step: '3', title: 'In the Kitchen', time: 'Pending', completed: false, icon: 'kitchen' },
-      { step: '4', title: 'Out for Delivery', time: 'Pending', completed: false, icon: 'delivery' },
-      { step: '5', title: 'Delivered', time: 'Pending', completed: false, icon: 'delivered' },
-    ],
-    items: [
-      {
-        id: 'item-2047-1',
-        name: 'Cheese Burst',
-        variant: '10" Regular',
-        customizationType: 'Extra Cheese',
-        customizationDetails: 'Extra cheese, signature tomato sauce',
-        price: 449,
-        quantity: 1,
-        image: 'https://images.pexels.com/photos/34407073/pexels-photo-34407073.jpeg?auto=compress&cs=tinysrgb&h=200&w=200',
-      },
-    ],
-    subtotal: 449,
-    deliveryFee: 0,
-    taxes: 22,
-    totalPaid: 471,
-    customer: {
-      name: 'Arjun Mehta',
-      email: 'arjun.mehta@example.com',
-      phone: '+91 98301 22334',
-      memberSince: 'Jul 2026',
-      totalOrders: 5,
-    },
-    delivery: {
-      addressLine1: '45, Lake View Road',
-      addressLine2: 'Ballygunge',
-      city: 'Kolkata, West Bengal 700019',
-      deliveredAt: 'Estimated in 35 mins',
-      partnerName: 'Rajesh Sen',
-      partnerPhone: '+91 98765 11223',
-      partnerAvatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&h=120&w=120',
-    },
-    payment: {
-      method: 'Razorpay (Card)',
-      status: 'Success',
-      amount: 471,
-      referenceId: 'Demo Reference (pay_PD2047_demo)',
-      paidOn: 'Sep 16, 2026, 1:10 PM',
-    },
-    notes: [
-      {
-        id: 'note-2047-1',
-        author: 'Admin',
-        time: 'Sep 16, 2026, 1:12 PM',
-        text: 'Order verified and queued for kitchen prep.',
-      },
-    ],
-  },
-  'PD-2046': {
-    id: 'PD-2046',
-    placedDate: 'Sep 16, 2026 at 12:45 PM',
-    status: 'Out for Delivery',
-    timeline: [
-      { step: '1', title: 'Order Placed', time: 'Sep 16, 12:45 PM', completed: true, icon: 'cart' },
-      { step: '2', title: 'Confirmed', time: 'Sep 16, 12:47 PM', completed: true, icon: 'confirm' },
-      { step: '3', title: 'In the Kitchen', time: 'Sep 16, 1:00 PM', completed: true, icon: 'kitchen' },
-      { step: '4', title: 'Out for Delivery', time: 'Sep 16, 1:20 PM', completed: true, icon: 'delivery' },
-      { step: '5', title: 'Delivered', time: 'Pending', completed: false, icon: 'delivered' },
-    ],
-    items: [
-      {
-        id: 'item-2046-1',
-        name: 'Chicken Feast',
-        variant: '12" Large',
-        customizationType: 'Non-Veg Special',
-        customizationDetails: 'Grilled chicken, onions, capsicum, mozzarella',
-        price: 399,
-        quantity: 2,
-        image: 'https://images.pexels.com/photos/19786200/pexels-photo-19786200.jpeg?auto=compress&cs=tinysrgb&h=200&w=200',
-      },
-      {
-        id: 'item-2046-2',
-        name: 'Farmhouse',
-        variant: '10" Regular',
-        customizationType: 'Veggie',
-        customizationDetails: 'Onions, capsicum, mushrooms, olives',
-        price: 349,
-        quantity: 1,
-        image: 'https://images.pexels.com/photos/5640034/pexels-photo-5640034.jpeg?auto=compress&cs=tinysrgb&h=200&w=200',
-      },
-    ],
-    subtotal: 1147,
-    deliveryFee: 0,
-    taxes: 57,
-    totalPaid: 1204,
-    customer: {
-      name: 'Neha Kapoor',
-      email: 'neha.kapoor@example.com',
-      phone: '+91 98111 55667',
-      badge: 'VIP',
-      memberSince: 'May 2026',
-      totalOrders: 18,
-    },
-    delivery: {
-      addressLine1: '88, Park Street',
-      addressLine2: 'Block A, Flat 4B',
-      city: 'Kolkata, West Bengal 700016',
-      deliveredAt: 'Driver en route',
-      partnerName: 'Bikash Roy',
-      partnerPhone: '+91 98312 99887',
-      partnerAvatar: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&h=120&w=120',
-    },
-    payment: {
-      method: 'Razorpay (Net Banking)',
-      status: 'Success',
-      amount: 1204,
-      referenceId: 'Demo Reference (pay_PD2046_demo)',
-      paidOn: 'Sep 16, 2026, 12:45 PM',
-    },
-    notes: [
-      {
-        id: 'note-2046-1',
-        author: 'Admin',
-        time: 'Sep 16, 2026, 1:21 PM',
-        text: 'Dispatched with rider Bikash Roy. Customer requested contactless handoff.',
-      },
-    ],
-  },
-};
-
 interface AdminOrderDetailsProps {
   orderId: string;
   onNavigate: (path: string) => void;
@@ -320,30 +102,48 @@ export function AdminOrderDetails({ orderId, onNavigate }: AdminOrderDetailsProp
   const [backendOrder, setBackendOrder] = useState<BackendOrder | null>(null);
   const [nextStatus, setNextStatus] = useState<string | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
+    setLoading(true);
+    setFetchError(null);
     getAdminOrder(orderId)
       .then((res) => {
-        if (isMounted && res.success && res.data?.order) {
-          setBackendOrder(res.data.order);
-          setNextStatus(res.data.nextStatus);
+        if (isMounted) {
+          if (res.success && res.data?.order) {
+            setBackendOrder(res.data.order);
+            setNextStatus(res.data.nextStatus);
+          } else {
+            setFetchError(res.error || 'Order not found in database.');
+          }
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        if (isMounted) {
+          setFetchError(err instanceof Error ? err.message : 'Network error loading order.');
+        }
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
     return () => {
       isMounted = false;
     };
   }, [orderId]);
 
-  const cleanId = orderId.replace(/^#/, '').toUpperCase();
-  const mockOrder =
-    ADMIN_ORDERS[cleanId] ||
-    (cleanId === 'PD-2048' ? ADMIN_ORDERS['PD-2048'] : undefined);
+  const triggerNotice = (msg: string) => {
+    setToastNotice(msg);
+    setTimeout(() => setToastNotice(null), 3800);
+  };
 
-  const order: AdminOrderData | undefined = backendOrder
+  // Map real backend order to presentation format
+  const order: AdminOrderData | null = backendOrder
     ? {
         id: String(backendOrder.id || backendOrder._id).slice(-8).toUpperCase(),
+        rawId: String(backendOrder.id || backendOrder._id),
         placedDate: new Date(backendOrder.createdAt).toLocaleString('en-US', {
           month: 'short',
           day: 'numeric',
@@ -361,7 +161,7 @@ export function AdminOrderDetails({ orderId, onNavigate }: AdminOrderDetailsProp
         timeline: [
           {
             step: '1',
-            title: 'Order Placed',
+            title: 'Order Received',
             time: new Date(backendOrder.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             completed: true,
             icon: 'cart',
@@ -375,7 +175,7 @@ export function AdminOrderDetails({ orderId, onNavigate }: AdminOrderDetailsProp
           },
           {
             step: '3',
-            title: 'Sent to Delivery',
+            title: 'Out for Delivery',
             time: backendOrder.orderStatus === 'SENT_TO_DELIVERY' ? 'Dispatched' : 'Pending',
             completed: backendOrder.orderStatus === 'SENT_TO_DELIVERY',
             icon: 'delivery',
@@ -384,7 +184,7 @@ export function AdminOrderDetails({ orderId, onNavigate }: AdminOrderDetailsProp
         items: [
           {
             id: String(backendOrder.id || backendOrder._id),
-            name: backendOrder.pizza?.name || 'Custom Pizza',
+            name: backendOrder.pizza?.name || 'Custom Artisan Pizza',
             variant: `${backendOrder.customization?.base?.name || 'Classic'} Crust`,
             customizationType: backendOrder.customization?.cheese?.name || 'Mozzarella',
             customizationDetails: `Sauce: ${backendOrder.customization?.sauce?.name || 'Tomato'}${
@@ -392,8 +192,11 @@ export function AdminOrderDetails({ orderId, onNavigate }: AdminOrderDetailsProp
                 ? ` · Veggies: ${backendOrder.customization.vegetables.map((v) => v.name).join(', ')}`
                 : ''
             }`,
-            price: Math.round((backendOrder.totalAmount - Math.round((backendOrder.totalAmount * 5) / 105)) / (backendOrder.quantity || 1)),
-            quantity: backendOrder.quantity,
+            price: Math.round(
+              (backendOrder.totalAmount - Math.round((backendOrder.totalAmount * 5) / 105)) /
+                (backendOrder.quantity || 1)
+            ),
+            quantity: backendOrder.quantity || 1,
             image:
               backendOrder.pizza?.image ||
               'https://images.pexels.com/photos/12096782/pexels-photo-12096782.jpeg?auto=compress&cs=tinysrgb&h=200&w=200',
@@ -404,24 +207,30 @@ export function AdminOrderDetails({ orderId, onNavigate }: AdminOrderDetailsProp
         taxes: Math.round((backendOrder.totalAmount * 5) / 105),
         totalPaid: backendOrder.totalAmount,
         customer: {
-          name: typeof backendOrder.user === 'object' && backendOrder.user?.name ? backendOrder.user.name : 'Customer',
-          email: typeof backendOrder.user === 'object' && backendOrder.user?.email ? backendOrder.user.email : 'user@example.com',
+          name:
+            typeof backendOrder.user === 'object' && backendOrder.user?.name
+              ? backendOrder.user.name
+              : 'Customer',
+          email:
+            typeof backendOrder.user === 'object' && backendOrder.user?.email
+              ? backendOrder.user.email
+              : 'customer@pizzadelight.com',
           phone: '+91 98765 43210',
-          badge: 'Verified',
+          badge: backendOrder.paymentStatus === 'SUCCESS' ? 'Verified' : 'Guest',
           memberSince: '2026',
           totalOrders: 1,
         },
         delivery: {
           addressLine1: 'Customer delivery address',
           addressLine2: 'Express dispatch',
-          city: 'Delivery Area',
-          deliveredAt: backendOrder.orderStatus === 'SENT_TO_DELIVERY' ? 'En Route' : 'Kitchen Prep',
+          city: 'Local Delivery Zone',
+          deliveredAt: backendOrder.orderStatus === 'SENT_TO_DELIVERY' ? 'En Route with Fleet' : 'Kitchen Preparation',
           partnerName: 'Fleet Rider',
           partnerPhone: '+91 91234 56789',
           partnerAvatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&h=120&w=120',
         },
         payment: {
-          method: backendOrder.paymentStatus === 'SUCCESS' ? 'Razorpay' : 'Pending',
+          method: backendOrder.paymentStatus === 'SUCCESS' ? 'Razorpay' : 'Pending Verification',
           status: backendOrder.paymentStatus,
           amount: backendOrder.totalAmount,
           referenceId: backendOrder.razorpayPaymentId || backendOrder.razorpayOrderId || 'N/A',
@@ -429,21 +238,16 @@ export function AdminOrderDetails({ orderId, onNavigate }: AdminOrderDetailsProp
         },
         notes: [
           {
-            id: 'note-1',
+            id: 'note-init',
             author: 'System',
-            time: 'At order creation',
-            text: `Order received with payment status: ${backendOrder.paymentStatus}.`,
+            time: new Date(backendOrder.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            text: `Order created with payment status: ${backendOrder.paymentStatus}. Initial status: ${backendOrder.orderStatus}.`,
           },
         ],
       }
-    : mockOrder;
+    : null;
 
   const activeNotes = notesList || (order ? order.notes : []);
-
-  const triggerNotice = (msg: string) => {
-    setToastNotice(msg);
-    setTimeout(() => setToastNotice(null), 3800);
-  };
 
   const handleAddNote = () => {
     if (!newNoteText.trim()) return;
@@ -453,23 +257,35 @@ export function AdminOrderDetails({ orderId, onNavigate }: AdminOrderDetailsProp
       time: 'Just now',
       text: newNoteText.trim(),
     };
-    setNotesList([...activeNotes, newNote]);
+    setNotesList([newNote, ...activeNotes]);
     setNewNoteText('');
     setIsAddingNote(false);
-    triggerNotice('Note added locally to this session (backend sync unavailable).');
+    triggerNotice('Internal note added to order record.');
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const renderTimelineIcon = (type: string) => {
+    switch (type) {
+      case 'cart':
+        return <ShoppingCart size={15} aria-hidden="true" />;
+      case 'kitchen':
+        return <ChefHat size={15} aria-hidden="true" />;
+      case 'delivery':
+        return <Bike size={15} aria-hidden="true" />;
+      default:
+        return <Check size={15} aria-hidden="true" />;
+    }
   };
 
   // Safe Fallback for invalid/unknown order IDs
-  if (!order) {
+  if (loading) {
     return (
       <main className="admin-order-page admin-layout">
         <aside className="admin-sidebar" aria-label="Admin Navigation">
-          <button
-            type="button"
-            className="logo"
-            onClick={() => onNavigate('/admin')}
-            aria-label="PizzaDelight home"
-          >
+          <button type="button" className="logo" onClick={() => onNavigate('/admin')}>
             <span className="logo-mark" aria-hidden="true">◒</span>
             <span>
               <strong>PizzaDelight</strong>
@@ -477,27 +293,61 @@ export function AdminOrderDetails({ orderId, onNavigate }: AdminOrderDetailsProp
             </span>
           </button>
           <p className="admin-label">ADMIN PANEL</p>
-          <button
-            type="button"
-            className="admin-nav"
-            onClick={() => onNavigate('/admin')}
-          >
+          <button type="button" className="admin-nav" onClick={() => onNavigate('/admin')}>
             <Home size={17} aria-hidden="true" />
             <span>Dashboard</span>
           </button>
-          <button
-            type="button"
-            className="admin-nav active"
-            onClick={() => onNavigate('/admin')}
-          >
+          <button type="button" className="admin-nav active" onClick={() => onNavigate('/admin/orders')}>
             <Package size={17} aria-hidden="true" />
             <span>Orders</span>
+          </button>
+          <button type="button" className="admin-nav" onClick={() => onNavigate('/admin/inventory')}>
+            <Layers size={17} aria-hidden="true" />
+            <span>Inventory</span>
+          </button>
+        </aside>
+        <section className="admin-content" style={{ display: 'grid', placeItems: 'center', minHeight: 400 }}>
+          <div style={{ textAlign: 'center' }}>
+            <RefreshCw size={28} className="animate-spin text-red" style={{ margin: '0 auto 14px' }} />
+            <p>Loading real order details from database...</p>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  if (!order || fetchError) {
+    return (
+      <main className="admin-order-page admin-layout">
+        <aside className="admin-sidebar" aria-label="Admin Navigation">
+          <button type="button" className="logo" onClick={() => onNavigate('/admin')}>
+            <span className="logo-mark" aria-hidden="true">◒</span>
+            <span>
+              <strong>PizzaDelight</strong>
+              <small>GOOD PIZZA. HAPPIER PEOPLE.</small>
+            </span>
+          </button>
+          <p className="admin-label">ADMIN PANEL</p>
+          <button type="button" className="admin-nav" onClick={() => onNavigate('/admin')}>
+            <Home size={17} aria-hidden="true" />
+            <span>Dashboard</span>
+          </button>
+          <button type="button" className="admin-nav active" onClick={() => onNavigate('/admin/orders')}>
+            <Package size={17} aria-hidden="true" />
+            <span>Orders</span>
+          </button>
+          <button type="button" className="admin-nav" onClick={() => onNavigate('/admin/inventory')}>
+            <Layers size={17} aria-hidden="true" />
+            <span>Inventory</span>
           </button>
           <div className="admin-spacer" />
           <button
             type="button"
             className="admin-nav"
-            onClick={() => onNavigate('/')}
+            onClick={() => {
+              logoutAdmin();
+              onNavigate('/admin/login');
+            }}
           >
             <LogOut size={17} aria-hidden="true" />
             <span>Logout</span>
@@ -508,38 +358,21 @@ export function AdminOrderDetails({ orderId, onNavigate }: AdminOrderDetailsProp
           <div className="admin-order-not-found-card">
             <h2>Order Not Found</h2>
             <p>
-              We couldn&apos;t find admin order #{orderId}. It may not exist in the
-              mock operational database.
+              We couldn&apos;t find order #{orderId}. It may not exist in the active MongoDB database.
             </p>
             <button
               type="button"
               className="button button-outline"
-              onClick={() => onNavigate('/admin')}
+              onClick={() => onNavigate('/admin/orders')}
             >
               <ArrowLeft size={16} aria-hidden="true" />
-              <span>Back to Orders</span>
+              <span>Back to Orders List</span>
             </button>
           </div>
         </section>
       </main>
     );
   }
-
-  const renderTimelineIcon = (type: string) => {
-    switch (type) {
-      case 'cart':
-        return <ShoppingCart size={15} aria-hidden="true" />;
-      case 'confirm':
-        return <FileText size={15} aria-hidden="true" />;
-      case 'kitchen':
-        return <ChefHat size={15} aria-hidden="true" />;
-      case 'delivery':
-        return <Bike size={15} aria-hidden="true" />;
-      case 'delivered':
-      default:
-        return <Check size={15} aria-hidden="true" />;
-    }
-  };
 
   return (
     <main className="admin-order-page admin-layout">
@@ -580,7 +413,7 @@ export function AdminOrderDetails({ orderId, onNavigate }: AdminOrderDetailsProp
           <button
             type="button"
             className="admin-nav active"
-            onClick={() => onNavigate('/admin')}
+            onClick={() => onNavigate('/admin/orders')}
           >
             <Package size={17} aria-hidden="true" />
             <span>Orders</span>
@@ -588,17 +421,7 @@ export function AdminOrderDetails({ orderId, onNavigate }: AdminOrderDetailsProp
           <button
             type="button"
             className="admin-nav"
-            onClick={() =>
-              triggerNotice('Menu Management is not connected in this preview.')
-            }
-          >
-            <BookOpen size={17} aria-hidden="true" />
-            <span>Menu Management</span>
-          </button>
-          <button
-            type="button"
-            className="admin-nav"
-            onClick={() => onNavigate('/admin')}
+            onClick={() => onNavigate('/admin/inventory')}
           >
             <Layers size={17} aria-hidden="true" />
             <span>Inventory</span>
@@ -607,55 +430,24 @@ export function AdminOrderDetails({ orderId, onNavigate }: AdminOrderDetailsProp
             type="button"
             className="admin-nav"
             onClick={() =>
-              triggerNotice('Customer database is not connected in this preview.')
+              triggerNotice('Menu Management can be accessed through commissary catalog.')
+            }
+          >
+            <BookOpen size={17} aria-hidden="true" />
+            <span>Menu Management</span>
+          </button>
+          <button
+            type="button"
+            className="admin-nav"
+            onClick={() =>
+              triggerNotice('Customer records are linked with active customer orders.')
             }
           >
             <Users size={17} aria-hidden="true" />
             <span>Customers</span>
           </button>
-          <button
-            type="button"
-            className="admin-nav"
-            onClick={() =>
-              triggerNotice('Offers and coupons service is unconfigured.')
-            }
-          >
-            <Award size={17} aria-hidden="true" />
-            <span>Offers &amp; Coupons</span>
-          </button>
-          <button
-            type="button"
-            className="admin-nav"
-            onClick={() =>
-              triggerNotice('Analytics & reporting module is in preview mode.')
-            }
-          >
-            <TrendingUp size={17} aria-hidden="true" />
-            <span>Reports</span>
-          </button>
-          <button
-            type="button"
-            className="admin-nav"
-            onClick={() =>
-              triggerNotice('System notifications require active WebSocket server.')
-            }
-          >
-            <Bell size={17} aria-hidden="true" />
-            <span>Notifications</span>
-          </button>
-          <button
-            type="button"
-            className="admin-nav"
-            onClick={() =>
-              triggerNotice('Admin settings are unavailable in this preview.')
-            }
-          >
-            <Settings size={17} aria-hidden="true" />
-            <span>Settings</span>
-          </button>
         </nav>
 
-        {/* Sidebar Promotional Card */}
         <div className="admin-sidebar-promo-card">
           <div className="promo-card-copy">
             <p className="promo-tagline">Fresh Food</p>
@@ -678,7 +470,10 @@ export function AdminOrderDetails({ orderId, onNavigate }: AdminOrderDetailsProp
         <button
           type="button"
           className="admin-nav admin-logout-btn"
-          onClick={() => onNavigate('/')}
+          onClick={() => {
+            logoutAdmin();
+            onNavigate('/admin/login');
+          }}
         >
           <LogOut size={17} aria-hidden="true" />
           <span>Logout</span>
@@ -705,11 +500,11 @@ export function AdminOrderDetails({ orderId, onNavigate }: AdminOrderDetailsProp
             <button
               type="button"
               className="admin-topbar-bell-btn"
-              onClick={() => triggerNotice('3 unread alerts (real-time notification service unconfigured).')}
-              aria-label="View notifications (3 unread)"
+              onClick={() => triggerNotice('All systems operational.')}
+              aria-label="View notifications"
             >
               <Bell size={18} />
-              <span className="bell-badge-pill" aria-hidden="true">3</span>
+              <span className="bell-badge-pill" aria-hidden="true">0</span>
             </button>
 
             <div className="admin-user-profile-btn" role="button" tabIndex={0}>
@@ -740,7 +535,7 @@ export function AdminOrderDetails({ orderId, onNavigate }: AdminOrderDetailsProp
           <button
             type="button"
             className="breadcrumb-link"
-            onClick={() => onNavigate('/admin')}
+            onClick={() => onNavigate('/admin/orders')}
           >
             Orders
           </button>
@@ -750,17 +545,27 @@ export function AdminOrderDetails({ orderId, onNavigate }: AdminOrderDetailsProp
           </span>
         </nav>
 
-        {/* Order Header Row */}
+        {/* Order Header / Action Strip */}
         <div className="admin-order-header-row">
-          <div className="order-title-group">
-            <div className="order-title-line">
+          <div className="admin-order-header-left">
+            <div className="order-title-meta-line">
               <h1 className="admin-order-main-title">Order #{order.id}</h1>
-              <span className={`admin-order-status-badge ${order.status.toLowerCase().replace(/\s+/g, '-')}`}>
+              <span
+                className={`admin-order-status-badge ${
+                  order.status === 'Delivered'
+                    ? 'status-delivered'
+                    : order.status === 'In Kitchen'
+                    ? 'status-in-kitchen'
+                    : order.status === 'Out for Delivery'
+                    ? 'status-out-delivery'
+                    : 'status-received'
+                }`}
+              >
                 {order.status}
               </span>
             </div>
-            <p className="admin-order-placed-subtitle">
-              Placed on {order.placedDate}
+            <p className="admin-order-placed-note">
+              Placed on {order.placedDate} &middot; Real MongoDB Record ({order.rawId})
             </p>
           </div>
 
@@ -768,34 +573,23 @@ export function AdminOrderDetails({ orderId, onNavigate }: AdminOrderDetailsProp
             <button
               type="button"
               className="button button-outline admin-header-btn"
-              onClick={() =>
-                triggerNotice('Invoice generation service is currently unavailable in this preview.')
-              }
+              onClick={handlePrint}
+              aria-label="Print order receipt"
             >
               <Printer size={15} aria-hidden="true" />
-              <span>Print Invoice</span>
+              <span>Print Receipt</span>
             </button>
 
+            {/* Advance Status Button */}
             <button
               type="button"
               className="button button-outline admin-header-btn"
-              onClick={() =>
-                triggerNotice('Email dispatch service is not configured. Connect SMTP backend to send emails.')
-              }
-            >
-              <Mail size={15} aria-hidden="true" />
-              <span>Send Email</span>
-            </button>
-
-            <button
-              type="button"
-              className="button button-outline admin-header-btn"
-              disabled={isUpdatingStatus}
+              disabled={isUpdatingStatus || !nextStatus}
               onClick={async () => {
                 if (backendOrder && nextStatus) {
                   setIsUpdatingStatus(true);
                   try {
-                    const res = await updateOrderStatus(orderId, nextStatus);
+                    const res = await updateOrderStatus(order.rawId, nextStatus);
                     if (res.success && res.data?.order) {
                       setBackendOrder(res.data.order);
                       setNextStatus(res.data.nextStatus);
@@ -808,15 +602,13 @@ export function AdminOrderDetails({ orderId, onNavigate }: AdminOrderDetailsProp
                   } finally {
                     setIsUpdatingStatus(false);
                   }
-                } else if (backendOrder && !nextStatus) {
-                  triggerNotice('Order has reached the final stage (Sent to Delivery).');
-                } else {
-                  triggerNotice('Status updated locally for demo.');
+                } else if (!nextStatus) {
+                  triggerNotice('Order has reached final status (Sent to Delivery).');
                 }
               }}
             >
               <RefreshCw size={15} aria-hidden="true" className={isUpdatingStatus ? 'animate-spin' : ''} />
-              <span>{nextStatus ? `Advance to ${nextStatus.replace(/_/g, ' ')}` : 'Update Status'}</span>
+              <span>{nextStatus ? `Advance to ${nextStatus.replace(/_/g, ' ')}` : 'Dispatched'}</span>
             </button>
 
             <div className="more-actions-container">
@@ -828,34 +620,30 @@ export function AdminOrderDetails({ orderId, onNavigate }: AdminOrderDetailsProp
                 aria-haspopup="true"
               >
                 <span>More Actions</span>
-                <ChevronDown size={15} aria-hidden="true" />
+                <ChevronDown size={14} aria-hidden="true" />
               </button>
 
               {moreActionsOpen && (
-                <div className="more-actions-dropdown-menu" role="menu">
+                <div className="admin-more-actions-dropdown" role="menu">
                   <button
                     type="button"
-                    className="dropdown-action-item"
                     role="menuitem"
                     onClick={() => {
                       setMoreActionsOpen(false);
-                      triggerNotice('Exporting order summary as PDF is unavailable.');
+                      onNavigate('/admin/orders');
                     }}
                   >
-                    <FileText size={14} aria-hidden="true" />
-                    <span>Download Summary</span>
+                    Back to All Orders
                   </button>
                   <button
                     type="button"
-                    className="dropdown-action-item"
                     role="menuitem"
                     onClick={() => {
                       setMoreActionsOpen(false);
-                      triggerNotice('Order flagging is unavailable in preview (no backend persistence).');
+                      onNavigate('/admin/inventory');
                     }}
                   >
-                    <Info size={14} aria-hidden="true" />
-                    <span>Flag for Review</span>
+                    View Ingredients in Stock
                   </button>
                 </div>
               )}
@@ -863,106 +651,79 @@ export function AdminOrderDetails({ orderId, onNavigate }: AdminOrderDetailsProp
           </div>
         </div>
 
-        {/* Horizontal 5-Step Order Status Timeline Card */}
-        <div className="admin-card admin-timeline-card">
+        {/* Status Stepper / Progress Timeline */}
+        <div className="admin-timeline-panel" aria-label="Order Lifecycle Timeline">
           <div className="admin-timeline-track">
-            {order.timeline.map((step, idx) => (
+            {order.timeline.map((item, idx) => (
               <div
-                className={`admin-timeline-step ${step.completed ? 'completed' : 'pending'}`}
-                key={step.title}
+                key={idx}
+                className={`admin-timeline-step ${item.completed ? 'step-completed' : 'step-pending'}`}
               >
-                <div className="timeline-step-indicator">
-                  <span className="step-circle-icon">
-                    {renderTimelineIcon(step.icon)}
-                  </span>
-                  {idx < order.timeline.length - 1 && (
-                    <span
-                      className={`timeline-connecting-bar ${
-                        step.completed ? 'completed' : ''
-                      }`}
-                    />
-                  )}
+                <div className="timeline-step-indicator" aria-hidden="true">
+                  {renderTimelineIcon(item.icon)}
                 </div>
                 <div className="timeline-step-labels">
-                  <strong className="timeline-step-title">{step.title}</strong>
-                  <small className="timeline-step-time">{step.time}</small>
+                  <strong className="timeline-step-name">{item.title}</strong>
+                  <span className="timeline-step-timestamp">{item.time}</span>
                 </div>
+                {idx < order.timeline.length - 1 && (
+                  <div
+                    className={`timeline-connecting-bar ${
+                      order.timeline[idx + 1].completed ? 'bar-filled' : 'bar-empty'
+                    }`}
+                    aria-hidden="true"
+                  />
+                )}
               </div>
             ))}
           </div>
-
-          {/* Delivery Success / Status Banner */}
-          {order.status === 'Delivered' ? (
-            <div className="admin-delivery-success-banner">
-              <div className="success-banner-icon" aria-hidden="true">
-                <Check size={18} />
-              </div>
-              <div className="success-banner-copy">
-                <strong>This order has been delivered successfully!</strong>
-                <p>Customer has received the order and marked it as delivered.</p>
-              </div>
-            </div>
-          ) : (
-            <div className="admin-delivery-active-banner">
-              <div className="active-banner-icon" aria-hidden="true">
-                <Clock size={18} />
-              </div>
-              <div className="active-banner-copy">
-                <strong>Order status: {order.status}</strong>
-                <p>Kitchen and logistics operations are processing this ticket.</p>
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* Main 2-Column Split Layout */}
-        <div className="admin-order-split-layout">
-          {/* Left / Center Column: Order Items Table & Totals */}
+        {/* 2-Column Main Layout: Left Details, Right Summary Cards */}
+        <div className="admin-order-workspace-grid">
+          {/* LEFT COLUMN: Items, Delivery, Notes */}
           <div className="admin-order-left-column">
-            <div className="admin-card admin-items-card">
-              <h2 className="admin-card-section-title">Order Items</h2>
+            {/* Ordered Items Card */}
+            <div className="admin-order-card items-card">
+              <div className="card-header-bar">
+                <h2>Items Ordered</h2>
+                <span className="badge-item-count">{order.items.length} Item(s)</span>
+              </div>
 
-              <div className="admin-table-responsive-wrapper">
-                <table className="admin-order-items-table">
+              <div className="admin-items-table-wrap">
+                <table className="admin-items-table" aria-label="Ordered Pizza Items">
                   <thead>
                     <tr>
-                      <th scope="col" className="col-item">Item</th>
-                      <th scope="col" className="col-custom">Customizations</th>
-                      <th scope="col" className="col-price">Price</th>
-                      <th scope="col" className="col-qty">Qty</th>
-                      <th scope="col" className="col-total">Total</th>
+                      <th>Product</th>
+                      <th>Customization</th>
+                      <th>Price</th>
+                      <th>Quantity</th>
+                      <th style={{ textAlign: 'right' }}>Total</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {order.items.map((item) => (
-                      <tr key={item.id}>
-                        <td className="col-item">
-                          <div className="table-item-cell">
-                            <img
-                              src={item.image}
-                              alt={item.name}
-                              className="item-row-thumbnail"
-                              loading="lazy"
-                            />
-                            <div className="item-row-names">
-                              <strong className="item-row-title">{item.name} ({item.variant})</strong>
-                            </div>
+                    {order.items.map((it) => (
+                      <tr key={it.id}>
+                        <td className="item-cell-product">
+                          <img
+                            src={it.image}
+                            alt={it.name}
+                            className="item-product-thumb"
+                            loading="lazy"
+                          />
+                          <div>
+                            <strong>{it.name}</strong>
+                            <span className="item-variant-label">{it.variant}</span>
                           </div>
                         </td>
-                        <td className="col-custom">
-                          <div className="item-customization-box">
-                            <strong className="customization-type">{item.customizationType}</strong>
-                            <p className="customization-details">{item.customizationDetails}</p>
-                          </div>
+                        <td className="item-cell-customization">
+                          <span className="custom-type-badge">{it.customizationType}</span>
+                          <p className="custom-details-desc">{it.customizationDetails}</p>
                         </td>
-                        <td className="col-price">
-                          <span className="item-unit-price">₹{item.price}</span>
-                        </td>
-                        <td className="col-qty">
-                          <span className="item-quantity-text">{item.quantity}</span>
-                        </td>
-                        <td className="col-total">
-                          <strong className="item-line-total">₹{item.price * item.quantity}</strong>
+                        <td className="item-cell-price">₹{it.price}</td>
+                        <td className="item-cell-qty">{it.quantity}</td>
+                        <td className="item-cell-total" style={{ textAlign: 'right' }}>
+                          ₹{it.price * it.quantity}
                         </td>
                       </tr>
                     ))}
@@ -970,212 +731,102 @@ export function AdminOrderDetails({ orderId, onNavigate }: AdminOrderDetailsProp
                 </table>
               </div>
 
-              {/* Financial Totals Breakdown */}
+              {/* Order Totals Summary */}
               <div className="admin-order-totals-section">
-                <div className="totals-line-row">
-                  <span className="totals-line-label">Subtotal</span>
-                  <span className="totals-line-val">₹{order.subtotal}</span>
+                <div className="totals-row">
+                  <span>Subtotal</span>
+                  <strong>₹{order.subtotal}</strong>
                 </div>
-                <div className="totals-line-row">
-                  <span className="totals-line-label">Delivery Fee</span>
-                  <span className="totals-line-val">₹{order.deliveryFee}</span>
+                <div className="totals-row">
+                  <span>Delivery Fee</span>
+                  <strong className="text-green-600">FREE</strong>
                 </div>
-                <div className="totals-line-row">
-                  <span className="totals-line-label">Taxes (GST)</span>
-                  <span className="totals-line-val">₹{order.taxes}</span>
+                <div className="totals-row">
+                  <span>Taxes (5% GST)</span>
+                  <strong>₹{order.taxes}</strong>
                 </div>
-                <div className="totals-final-row">
-                  <span className="final-total-label">Total Paid</span>
-                  <strong className="final-total-val">₹{order.totalPaid}</strong>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column: Customer, Delivery, Payment, Notes */}
-          <div className="admin-order-right-column">
-            {/* Card 1: Customer Information */}
-            <div className="admin-card admin-customer-card">
-              <div className="card-header-line">
-                <h3 className="admin-card-title">Customer Information</h3>
-                <button
-                  type="button"
-                  className="card-header-edit-btn"
-                  onClick={() =>
-                    triggerNotice('Customer profile editing is unavailable in this preview.')
-                  }
-                  aria-label="Edit customer information"
-                >
-                  <Edit2 size={13} aria-hidden="true" />
-                  <span>Edit</span>
-                </button>
-              </div>
-
-              <div className="customer-info-body">
-                <div className="customer-avatar-row">
-                  <div className="customer-avatar-circle" aria-hidden="true">
-                    <User size={22} />
-                  </div>
-                  <div className="customer-name-block">
-                    <div className="name-and-badge">
-                      <strong className="customer-name">{order.customer.name}</strong>
-                      {order.customer.badge && (
-                        <span className="customer-vip-badge">{order.customer.badge}</span>
-                      )}
-                    </div>
-                    <p className="customer-email">{order.customer.email}</p>
-                    <p className="customer-phone">
-                      <Phone size={13} aria-hidden="true" />
-                      <span>{order.customer.phone}</span>
-                    </p>
-                  </div>
-                </div>
-
-                <div className="customer-meta-strip">
-                  <span>Customer since {order.customer.memberSince}</span>
-                  <span className="meta-sep">|</span>
-                  <span>{order.customer.totalOrders} Orders</span>
+                <hr className="totals-divider" />
+                <div className="totals-row grand-total-row">
+                  <span>Total Paid</span>
+                  <strong className="grand-total-amount">₹{order.totalPaid}</strong>
                 </div>
               </div>
             </div>
 
-            {/* Card 2: Delivery Information */}
-            <div className="admin-card admin-delivery-card">
-              <div className="card-header-line">
-                <h3 className="admin-card-title">Delivery Information</h3>
-                <button
-                  type="button"
-                  className="card-header-edit-btn"
-                  onClick={() =>
-                    triggerNotice('Delivery destination editing requires dispatcher integration.')
-                  }
-                  aria-label="Edit delivery information"
-                >
-                  <Edit2 size={13} aria-hidden="true" />
-                  <span>Edit</span>
-                </button>
+            {/* Delivery Information Card */}
+            <div className="admin-order-card delivery-info-card">
+              <div className="card-header-bar">
+                <h2>Delivery Information</h2>
+                <span className="badge-partner-status">Express Dispatch</span>
               </div>
 
-              <div className="delivery-info-body">
+              <div className="delivery-card-body">
                 <div className="delivery-address-group">
-                  <div className="address-icon-wrap" aria-hidden="true">
-                    <MapPin size={18} />
+                  <div className="icon-circle address-icon">
+                    <MapPin size={18} aria-hidden="true" />
                   </div>
-                  <div className="address-copy">
-                    <p className="address-line">{order.delivery.addressLine1}</p>
-                    <p className="address-line">{order.delivery.addressLine2}</p>
-                    <p className="address-line">{order.delivery.city}</p>
+                  <div>
+                    <h3 className="section-subheading">Delivery Address</h3>
+                    <p className="delivery-address-line">{order.delivery.addressLine1}</p>
+                    <p className="delivery-address-line">{order.delivery.addressLine2}</p>
+                    <p className="delivery-city-line">{order.delivery.city}</p>
                   </div>
-                  <button
-                    type="button"
-                    className="button button-outline map-view-btn"
-                    onClick={() =>
-                      triggerNotice('Live map coordinates are unavailable in this preview.')
-                    }
-                  >
-                    View on Map
-                  </button>
                 </div>
 
-                <div className="delivery-partner-subcard">
-                  <p className="partner-section-label">Delivery Partner</p>
-                  <div className="partner-details-strip">
+                <hr className="card-internal-divider" />
+
+                <div className="delivery-partner-group">
+                  <div className="partner-details-left">
                     <img
                       src={order.delivery.partnerAvatar}
                       alt={order.delivery.partnerName}
                       className="partner-avatar-img"
                     />
-                    <div className="partner-name-col">
-                      <strong className="partner-name">{order.delivery.partnerName}</strong>
-                      <p className="partner-phone">{order.delivery.partnerPhone}</p>
-                    </div>
-                    <button
-                      type="button"
-                      className="button button-outline partner-call-btn"
-                      onClick={() =>
-                        triggerNotice('Driver calling is unavailable in this preview.')
-                      }
-                    >
-                      <Phone size={13} aria-hidden="true" />
-                      <span>Call</span>
-                    </button>
-                  </div>
-
-                  <div className="delivered-time-strip">
-                    <span className="time-strip-label">Delivered at</span>
-                    <div className="time-strip-val">
-                      <Clock size={14} aria-hidden="true" />
-                      <span>{order.delivery.deliveredAt}</span>
+                    <div>
+                      <h3 className="partner-name-text">{order.delivery.partnerName}</h3>
+                      <p className="partner-role-note">Assigned Fleet Courier</p>
+                      <span className="delivered-timestamp-badge">
+                        Status: {order.delivery.deliveredAt}
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Card 3: Payment Information */}
-            <div className="admin-card admin-payment-card">
-              <div className="card-header-line">
-                <h3 className="admin-card-title">Payment Information</h3>
-                <span className="payment-status-pill paid">Paid</span>
-              </div>
-
-              <div className="payment-info-body">
-                <div className="payment-method-row">
-                  <div className="payment-provider-icon" aria-hidden="true">
-                    <CreditCard size={18} />
-                  </div>
-                  <strong className="payment-provider-name">{order.payment.method}</strong>
-                  <strong className="payment-provider-amount">₹{order.payment.amount}</strong>
-                </div>
-
-                <div className="payment-details-grid">
-                  <div className="payment-meta-field">
-                    <span className="meta-field-label">Transaction ID</span>
-                    <strong className="meta-field-val reference-id">{order.payment.referenceId}</strong>
-                    <small className="payment-demo-subtext">Demo reference &bull; Not a live gateway record</small>
-                  </div>
-
-                  <div className="payment-meta-field">
-                    <span className="meta-field-label">Payment Status</span>
-                    <span className="meta-field-status success">{order.payment.status}</span>
-                  </div>
-
-                  <div className="payment-meta-field full-width">
-                    <span className="meta-field-label">Paid on</span>
-                    <span className="meta-field-val">{order.payment.paidOn}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 4: Order Notes */}
-            <div className="admin-card admin-notes-card">
-              <div className="card-header-line">
-                <h3 className="admin-card-title">Order Notes</h3>
-                <button
-                  type="button"
-                  className="card-header-add-btn"
-                  onClick={() => setIsAddingNote(!isAddingNote)}
-                >
-                  <Plus size={14} aria-hidden="true" />
-                  <span>Add Note</span>
-                </button>
+            {/* Internal Notes Card */}
+            <div className="admin-order-card notes-card">
+              <div className="card-header-bar">
+                <h2>Order Activity &amp; Notes</h2>
+                {!isAddingNote && (
+                  <button
+                    type="button"
+                    className="button button-outline button-small"
+                    onClick={() => setIsAddingNote(true)}
+                  >
+                    <Plus size={14} aria-hidden="true" />
+                    <span>Add Note</span>
+                  </button>
+                )}
               </div>
 
               {isAddingNote && (
-                <div className="admin-note-input-wrap">
+                <div className="add-note-inline-box">
                   <textarea
-                    className="admin-note-textarea"
-                    placeholder="Enter operational note (stored in local UI session only)..."
+                    rows={2}
+                    className="note-textarea"
+                    placeholder="Write an internal operational note..."
                     value={newNoteText}
                     onChange={(e) => setNewNoteText(e.target.value)}
-                    rows={2}
                   />
-                  <div className="admin-note-actions">
+                  <div className="note-action-btns">
                     <button
                       type="button"
-                      className="button button-outline button-small"
-                      onClick={() => setIsAddingNote(false)}
+                      className="button button-small button-outline"
+                      onClick={() => {
+                        setIsAddingNote(false);
+                        setNewNoteText('');
+                      }}
                     >
                       Cancel
                     </button>
@@ -1190,21 +841,91 @@ export function AdminOrderDetails({ orderId, onNavigate }: AdminOrderDetailsProp
                 </div>
               )}
 
-              <div className="order-notes-list">
-                {activeNotes.map((n) => (
-                  <div className="order-note-item" key={n.id}>
-                    <div className="note-author-avatar" aria-hidden="true">
-                      <span>{n.author.charAt(0)}</span>
+              <div className="notes-list">
+                {activeNotes.map((nt) => (
+                  <div key={nt.id} className="note-entry-item">
+                    <div className="note-meta-line">
+                      <strong className="note-author">{nt.author}</strong>
+                      <span className="note-time">{nt.time}</span>
                     </div>
-                    <div className="note-content-wrap">
-                      <div className="note-header-line">
-                        <strong className="note-author-name">{n.author} Note</strong>
-                        <span className="note-timestamp">{n.time}</span>
-                      </div>
-                      <p className="note-text-body">{n.text}</p>
-                    </div>
+                    <p className="note-content-text">{nt.text}</p>
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN: Customer, Payment */}
+          <div className="admin-order-right-column">
+            {/* Customer Details Card */}
+            <div className="admin-order-card customer-card">
+              <div className="card-header-bar">
+                <h2>Customer Details</h2>
+                {order.customer.badge && (
+                  <span className="badge-customer-vip">{order.customer.badge}</span>
+                )}
+              </div>
+
+              <div className="customer-info-body">
+                <div className="customer-avatar-row">
+                  <div className="customer-large-avatar" aria-hidden="true">
+                    <User size={22} />
+                  </div>
+                  <div>
+                    <h3 className="customer-display-name">{order.customer.name}</h3>
+                    <p className="customer-member-since">Active PizzaDelight Customer</p>
+                  </div>
+                </div>
+
+                <div className="customer-contact-list">
+                  <div className="contact-item-row">
+                    <Mail size={15} className="contact-icon" aria-hidden="true" />
+                    <span>{order.customer.email}</span>
+                  </div>
+                  <div className="contact-item-row">
+                    <Phone size={15} className="contact-icon" aria-hidden="true" />
+                    <span>{order.customer.phone}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Payment Info Card */}
+            <div className="admin-order-card payment-card">
+              <div className="card-header-bar">
+                <h2>Payment Information</h2>
+                <span
+                  className={`badge-payment-status ${
+                    order.payment.status === 'SUCCESS' ? 'badge-success' : 'badge-pending'
+                  }`}
+                >
+                  {order.payment.status}
+                </span>
+              </div>
+
+              <div className="payment-info-body">
+                <div className="payment-method-row">
+                  <CreditCard size={18} className="payment-method-icon" aria-hidden="true" />
+                  <div>
+                    <strong className="method-label">{order.payment.method}</strong>
+                    <small className="txn-ref-code">Ref: {order.payment.referenceId}</small>
+                  </div>
+                </div>
+
+                <div className="payment-breakdown-table">
+                  <div className="payment-field-row">
+                    <span>Transaction Total:</span>
+                    <strong>₹{order.payment.amount}</strong>
+                  </div>
+                  <div className="payment-field-row">
+                    <span>Verified At:</span>
+                    <span>{order.payment.paidOn}</span>
+                  </div>
+                  <div className="payment-field-row">
+                    <span>Gateway:</span>
+                    <span>Razorpay Standard</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

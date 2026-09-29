@@ -23,6 +23,7 @@ export type Product = {
   description: string;
   price: number;
   image: string;
+  category?: string;
   badge?: string;
   available: boolean;
 };
