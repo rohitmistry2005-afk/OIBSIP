@@ -21,7 +21,6 @@ import {
   X,
   Menu as MenuIcon,
   LogOut,
-  ArrowRight,
 } from 'lucide-react';
 
 export interface CustomerLayoutProps {

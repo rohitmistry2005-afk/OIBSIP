@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { updateUserProfile, getCurrentUser, getStoredUser, isAuthenticated } from './services/auth';
+import { updateUserProfile, getCurrentUser, getStoredUser } from './services/auth';
 import {
   Home,
   ChevronRight,

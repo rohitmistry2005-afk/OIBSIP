@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import type { Product } from './PizzaDetails';
 import { getMyOrder, BackendOrder } from './services/orderApi';
 import {
-  Heart,
   MapPin,
   ChevronRight,
   RotateCcw,
@@ -12,12 +11,10 @@ import {
   Phone,
   MessageSquare,
   AlertTriangle,
-  HelpCircle,
   Headphones,
   Plus,
   ArrowRight,
   Info,
-  Clock,
   CreditCard,
 } from 'lucide-react';
 

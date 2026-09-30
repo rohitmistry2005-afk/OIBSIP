@@ -27,7 +27,6 @@ import {
   Clock3,
   Facebook,
   FileText,
-  Gift,
   Heart,
   Home as HomeIcon,
   Instagram,
