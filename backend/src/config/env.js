@@ -29,4 +29,8 @@ export const env = {
   get razorpayCurrency() {
     return (process.env.RAZORPAY_CURRENCY || 'INR').trim();
   },
+  get cronSecret() {
+    return (process.env.CRON_SECRET || '').trim();
+  },
 };
+

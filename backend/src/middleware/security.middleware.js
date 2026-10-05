@@ -12,5 +12,6 @@ export function validateProductionConfig() {
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) problems.push('JWT_SECRET must be at least 32 characters in production.');
   if (!env.mongoUri) problems.push('MONGO_URI is required in production.');
   if (!env.clientUrl.startsWith('https://')) problems.push('CLIENT_URL should use HTTPS in production.');
+  if (!env.cronSecret) problems.push('CRON_SECRET is required in production.');
   if (problems.length) throw new Error(`Invalid production configuration: ${problems.join(' ')}`);
 }
