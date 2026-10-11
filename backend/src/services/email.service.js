@@ -2,7 +2,7 @@ import nodemailer from 'nodemailer';
 import { env } from '../config/env.js';
 
 function hasSmtpConfig() {
-  return Boolean(env.smtpHost && env.smtpUser && env.smtpPass && env.smtpFrom);
+  return Boolean(env.smtpHost && env.smtpUser && env.smtpPass && env.emailFrom);
 }
 
 function getTransporter() {
@@ -15,17 +15,25 @@ function getTransporter() {
   });
 }
 
-async function sendMail({ to, subject, text, html, isOtp = false }) {
+function maskSensitiveContent(content) {
+  if (!content) return '';
+  return String(content)
+    .replace(/https?:\/\/[^\s]+/gi, '[Link masked for security]')
+    .replace(/\b\d{6}\b/g, '******');
+}
+
+async function sendMail({ from = env.emailFrom, to, subject, text, html, isOtp = false }) {
   const transporter = getTransporter();
   if (!transporter) {
     if (isOtp) {
       console.log(`[email:dev] To: ${to}\nSubject: ${subject}\n[Verification Code dispatched: ****** (masked for security)]`);
     } else {
-      console.log(`[email:dev] To: ${to}\nSubject: ${subject}\n${text}`);
+      const safeText = maskSensitiveContent(text);
+      console.log(`[email:dev] To: ${to}\nSubject: ${subject}\n${safeText}`);
     }
     return { simulated: true };
   }
-  const result = await transporter.sendMail({ from: env.smtpFrom, to, subject, text, html });
+  const result = await transporter.sendMail({ from, to, subject, text, html });
   console.log(`[email:sent] To: ${to} Subject: "${subject}" MessageId: ${result.messageId}`);
   return result;
 }
@@ -72,7 +80,7 @@ export async function sendOtpEmail({ email, name, otp }) {
 
 export async function sendVerificationEmail({ email, name, token }) {
   const url = `${env.clientUrl}/verify-email?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`;
-  console.log(`[email:dispatch] Verification URL for ${email}: ${url}`);
+  console.log(`[email:dispatch] Verification email dispatched for ${email}`);
   return sendMail({
     to: email,
     subject: 'Verify your Pizza Delivery account',

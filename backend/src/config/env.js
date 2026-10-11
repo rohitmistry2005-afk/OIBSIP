@@ -7,6 +7,16 @@ for (const key of required) {
   }
 }
 
+export function formatSenderAddress(rawAddress, displayName = 'PizzaDelight') {
+  if (!rawAddress) return '';
+  const trimmed = String(rawAddress).trim();
+  if (!trimmed) return '';
+  if (trimmed.includes('<') && trimmed.includes('>')) {
+    return trimmed;
+  }
+  return `"${displayName}" <${trimmed}>`;
+}
+
 export const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
   port: Number(process.env.PORT || 5000),
@@ -18,7 +28,20 @@ export const env = {
   smtpPort: Number(process.env.SMTP_PORT || 587),
   smtpUser: process.env.SMTP_USER || '',
   smtpPass: process.env.SMTP_PASS || '',
-  smtpFrom: process.env.SMTP_FROM || process.env.SMTP_USER || '',
+  _emailFrom: undefined,
+  get emailFrom() {
+    if (this._emailFrom !== undefined) return this._emailFrom;
+    return formatSenderAddress(process.env.EMAIL_FROM || process.env.SMTP_FROM || '');
+  },
+  set emailFrom(val) {
+    this._emailFrom = val;
+  },
+  get smtpFrom() {
+    return this.emailFrom;
+  },
+  set smtpFrom(val) {
+    this.emailFrom = val;
+  },
   adminEmail: process.env.ADMIN_EMAIL || '',
   get razorpayKeyId() {
     return (process.env.RAZORPAY_KEY_ID || '').trim();
