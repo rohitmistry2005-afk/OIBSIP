@@ -5,6 +5,14 @@ node_modules/
 .env
 .env.*
 !.env.example
+*.local
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+
 
 # Logs and debug files
 logs/

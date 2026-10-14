@@ -12,6 +12,13 @@ dist-ssr/
 .env.*
 !.env.example
 *.local
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+
 
 # Logs
 logs/

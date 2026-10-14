@@ -25,6 +25,13 @@ frontend/.env.*
 backend/.env
 backend/.env.*
 !backend/.env.example
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+
 
 # Logs and debug files
 logs/
